@@ -5,6 +5,12 @@
  */
 class WeatherAPI {
     constructor() {
+        // Debug: Check if CONFIG is available
+        console.log('🔧 CONFIG object available:', typeof CONFIG !== 'undefined');
+        if (typeof CONFIG !== 'undefined') {
+            console.log('🔑 CONFIG.OPENWEATHER_API_KEY:', CONFIG.OPENWEATHER_API_KEY ? 'Set' : 'Not set');
+        }
+        
         // Load configuration from config file
         this.API_KEY = (typeof CONFIG !== 'undefined' && CONFIG.OPENWEATHER_API_KEY) || 'YOUR_API_KEY_HERE';
         this.BASE_URL = (typeof CONFIG !== 'undefined' && CONFIG.OPENWEATHER_BASE_URL) || 'https://api.openweathermap.org/data/2.5';

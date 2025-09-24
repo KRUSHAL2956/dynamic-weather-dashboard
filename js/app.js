@@ -52,8 +52,12 @@ class WeatherDashboard {
      */
     async init() {
         try {
+            console.log('🌟 Initializing Weather Dashboard...');
             this.setupEventListeners();
             this.applyTheme();
+            
+            // Debug: Check if API key is set
+            console.log('🔑 API Key configured:', weatherAPI.isApiKeySet());
             
             // Try to load weather for user's current location
             await this.loadCurrentLocationWeather();
@@ -191,28 +195,34 @@ class WeatherDashboard {
      */
     async loadCurrentLocationWeather() {
         try {
+            console.log('🌍 Attempting to load current location weather...');
             if (Utils.supportsGeolocation()) {
+                console.log('📍 Geolocation supported, getting position...');
                 const position = await Utils.getCurrentLocation();
+                console.log('📍 Position received:', position.latitude, position.longitude);
                 await this.loadWeatherByCoordinates(position.latitude, position.longitude);
             } else {
+                console.log('📍 Geolocation not supported, using fallback city');
                 // Fallback to a default city if geolocation is not supported
                 await this.loadWeatherByCity('London');
             }
         } catch (error) {
-            console.warn('Could not load current location weather:', error);
+            console.warn('⚠️ Could not load current location weather:', error);
             // Fallback to a default city
             try {
+                console.log('🏙️ Trying fallback city: London');
                 await this.loadWeatherByCity('London');
             } catch (fallbackError) {
-                console.warn('Fallback city failed, using demo data:', fallbackError);
+                console.warn('⚠️ Fallback city failed, using demo data:', fallbackError);
                 // Use demo data as final fallback
                 try {
+                    console.log('🎭 Loading demo data...');
                     const demoData = weatherAPI.getDemoWeatherData();
                     this.weatherData = demoData;
                     await this.updateUI(demoData);
                     Utils.showError('Using demo data. Please check your API key configuration.', 10000);
                 } catch (demoError) {
-                    console.error('Demo data failed:', demoError);
+                    console.error('❌ Demo data failed:', demoError);
                     Utils.showError('Unable to load weather data. Please check your configuration.');
                 }
             }
@@ -225,16 +235,20 @@ class WeatherDashboard {
      */
     async loadWeatherByCity(cityName) {
         try {
+            console.log(`🏙️ Loading weather for city: ${cityName}`);
             this.showLoadingStates();
             
             const weatherData = await weatherAPI.getCompleteWeatherData({ city: cityName });
+            console.log('📊 Weather data received:', weatherData);
             this.weatherData = weatherData;
             this.currentLocation = { city: cityName };
             this.lastUpdateTime = Date.now();
             
             await this.updateUI(weatherData);
+            console.log('✅ UI updated successfully');
             
         } catch (error) {
+            console.error(`❌ Failed to load weather for ${cityName}:`, error);
             throw new Error(`Unable to load weather for "${Utils.sanitizeText(cityName)}". ${error.message}`);
         } finally {
             this.hideLoadingStates();
@@ -720,17 +734,25 @@ class WeatherDashboard {
     }
 }
 
-// Create global instances
-const weatherAPI = new WeatherAPI();
+// Create global instances - will be initialized when DOM loads
+let weatherAPI;
 
 // Initialize the application when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('🚀 DOM loaded, starting initialization...');
+    
+    // Create weatherAPI instance after DOM and all scripts are loaded
+    weatherAPI = new WeatherAPI();
+    
     // Check if API key is configured
     if (!weatherAPI.isApiKeySet()) {
+        console.error('❌ API key not configured');
         Utils.showError(
-            'Weather API key is not configured. Please add your OpenWeatherMap API key to the weather.js file.',
+            'Weather API key is not configured. Please add your OpenWeatherMap API key to the config.js file.',
             0 // Don't auto-hide this error
         );
+    } else {
+        console.log('✅ API key configured successfully');
     }
     
     // Initialize the weather dashboard
