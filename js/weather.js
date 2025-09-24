@@ -8,7 +8,7 @@ class WeatherAPI {
         // Load configuration from config file
         this.API_KEY = (typeof CONFIG !== 'undefined' && CONFIG.OPENWEATHER_API_KEY) || 'YOUR_API_KEY_HERE';
         this.BASE_URL = (typeof CONFIG !== 'undefined' && CONFIG.OPENWEATHER_BASE_URL) || 'https://api.openweathermap.org/data/2.5';
-        this.ONECALL_URL = (typeof CONFIG !== 'undefined' && CONFIG.OPENWEATHER_ONECALL_URL) || 'https://api.openweathermap.org/data/3.0/onecall';
+
         this.GEOCODING_URL = (typeof CONFIG !== 'undefined' && CONFIG.OPENWEATHER_GEOCODING_URL) || 'https://api.openweathermap.org/geo/1.0';
         
         // Cache settings

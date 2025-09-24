@@ -269,41 +269,20 @@ class WeatherDashboard {
      * @param {Object} weatherData - Complete weather data
      */
     async updateUI(weatherData) {
-        console.log('Updating UI with weather data:', weatherData);
+
         
         // Update current weather
         this.updateCurrentWeather(weatherData.current, weatherData.location);
         
-        // Update hourly forecast
-        if (weatherData.hourly) {
-            // One Call API provides hourly data directly
-            console.log('Using One Call API hourly data');
-            this.updateHourlyForecast(weatherData.hourly.slice(0, 8));
-        } else if (weatherData.forecast && weatherData.forecast.list) {
-            // Fallback to basic API forecast data
-            console.log('Using basic API forecast data for hourly');
-            this.updateHourlyForecast(weatherData.forecast.list.slice(0, 8));
-        } else {
-            console.log('No hourly forecast data available');
+        // Update hourly forecast (use forecast data for hourly)
+        if (weatherData.forecast && weatherData.forecast.list) {
+            this.updateHourlyForecast(weatherData.forecast.list.slice(0, 8)); // First 8 entries for hourly
         }
         
-        // Update daily forecast
-        if (weatherData.daily) {
-            // One Call API provides daily data directly
-            console.log('Using One Call API daily data');
-            this.updateDailyForecast(weatherData.daily.slice(0, 5));
-        } else if (weatherData.forecast && weatherData.forecast.list) {
-            // Fallback: process forecast data to get daily data
-            console.log('Processing basic API forecast data for daily');
+        // Update daily forecast (process forecast data to get daily data)
+        if (weatherData.forecast && weatherData.forecast.list) {
             const dailyData = this.processDailyForecast(weatherData.forecast.list);
             this.updateDailyForecast(dailyData);
-        } else {
-            console.log('No daily forecast data available');
-        }
-        
-        // Update weather alerts if available (One Call API feature)
-        if (weatherData.alerts && weatherData.alerts.length > 0) {
-            this.updateWeatherAlerts(weatherData.alerts);
         }
         
         // Update background based on weather
@@ -344,7 +323,7 @@ class WeatherDashboard {
 
         // Temperature
         if (this.elements.tempValue) {
-            const temp = current.temp || current.main?.temp;
+            const temp = current.main?.temp;
             this.elements.tempValue.textContent = temp !== undefined ? `${Math.round(temp)}°C` : '--';
         }
 
@@ -355,8 +334,8 @@ class WeatherDashboard {
         }
 
         if (this.elements.feelsLike) {
-            const feelsLike = current.feels_like || current.main?.feels_like;
-            this.elements.feelsLike.textContent = feelsLike !== undefined ? `${Math.round(feelsLike)}°C` : '--';
+            this.elements.feelsLike.textContent = 
+                current.main?.feels_like ? `${Math.round(current.main.feels_like)}°C` : '--';
         }
 
         // Weather details
@@ -366,31 +345,23 @@ class WeatherDashboard {
         }
 
         if (this.elements.humidity) {
-            const humidity = current.humidity || current.main?.humidity;
-            this.elements.humidity.textContent = humidity ? `${humidity}%` : '--%';
+            this.elements.humidity.textContent = 
+                current.main?.humidity ? `${current.main.humidity}%` : '--%';
         }
 
         if (this.elements.windSpeed) {
             this.elements.windSpeed.textContent = 
-                current.wind_speed || current.wind?.speed ? 
-                `${Utils.convertWindSpeed(current.wind_speed || current.wind.speed, 'ms', 'kmh')} km/h` : '-- km/h';
+                current.wind?.speed ? `${Utils.convertWindSpeed(current.wind.speed, 'ms', 'kmh')} km/h` : '-- km/h';
         }
 
         if (this.elements.pressure) {
-            const pressure = current.pressure || current.main?.pressure;
-            this.elements.pressure.textContent = pressure ? Utils.formatPressure(pressure) : '-- hPa';
+            this.elements.pressure.textContent = 
+                current.main?.pressure ? Utils.formatPressure(current.main.pressure) : '-- hPa';
         }
 
         if (this.elements.uvIndex) {
-            if (current.uvi !== null && current.uvi !== undefined) {
-                // One Call API provides UV index directly
-                const uvInfo = Utils.getUVIndexInfo(current.uvi);
-                this.elements.uvIndex.innerHTML = 
-                    `<span style="color: ${uvInfo.color}">${Math.round(current.uvi)} (${uvInfo.description})</span>`;
-            } else {
-                // Basic API doesn't provide UV index
-                this.elements.uvIndex.textContent = '--';
-            }
+            // Note: UV index is not available in basic OpenWeatherMap API
+            this.elements.uvIndex.textContent = '--';
         }
 
         if (this.elements.cloudiness) {
@@ -441,8 +412,6 @@ class WeatherDashboard {
      */
     updateHourlyForecast(hourlyData) {
         if (!this.elements.hourlyForecast || !hourlyData || !Array.isArray(hourlyData)) {
-            console.log('No hourly forecast data or invalid data:', hourlyData);
-            this.elements.hourlyForecast.innerHTML = '<p class="no-data">No hourly forecast data available</p>';
             return;
         }
 
@@ -481,8 +450,6 @@ class WeatherDashboard {
      */
     updateDailyForecast(dailyData) {
         if (!this.elements.forecastContainer || !dailyData || !Array.isArray(dailyData)) {
-            console.log('No daily forecast data or invalid data:', dailyData);
-            this.elements.forecastContainer.innerHTML = '<p class="no-data">No daily forecast data available</p>';
             return;
         }
 

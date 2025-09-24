@@ -1,10 +1,23 @@
 # API Keys and Configuration
 js/config.js
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Sensitive files
+secrets/
+credentials/
+.secrets
+.credentials
 
 # Environment files
-.env
+.env*
+!.env.example
 .env.local
 .env.production
+.env.development
+.env.test
 
 # IDE files
 .vscode/

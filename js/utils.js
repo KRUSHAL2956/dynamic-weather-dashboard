@@ -61,43 +61,7 @@ const Utils = {
         });
     },
 
-    /**
-     * Convert temperature between units
-     * @param {number} temp - Temperature value
-     * @param {string} from - Source unit ('C', 'F', 'K')
-     * @param {string} to - Target unit ('C', 'F', 'K')
-     * @returns {number} Converted temperature
-     */
-    convertTemperature(temp, from, to) {
-        if (from.toUpperCase() === to.toUpperCase()) return Math.round(temp);
-        
-        let celsius;
-        
-        // Convert to Celsius first
-        switch (from.toUpperCase()) {
-            case 'F':
-                celsius = (temp - 32) * 5/9;
-                break;
-            case 'K':
-                celsius = temp - 273.15;
-                break;
-            case 'C':
-            default:
-                celsius = temp;
-                break;
-        }
-        
-        // Convert from Celsius to target unit
-        switch (to.toUpperCase()) {
-            case 'F':
-                return Math.round(celsius * 9/5 + 32);
-            case 'K':
-                return Math.round(celsius + 273.15);
-            case 'C':
-            default:
-                return Math.round(celsius);
-        }
-    },
+
 
     /**
      * Convert wind speed between units
@@ -215,26 +179,7 @@ const Utils = {
         }
     },
 
-    /**
-     * Get air quality index description and color
-     * @param {number} aqi - Air quality index
-     * @returns {Object} Object with description and color
-     */
-    getAQIInfo(aqi) {
-        if (aqi === 1) {
-            return { description: 'Good', color: '#00e400' };
-        } else if (aqi === 2) {
-            return { description: 'Fair', color: '#ffff00' };
-        } else if (aqi === 3) {
-            return { description: 'Moderate', color: '#ff7e00' };
-        } else if (aqi === 4) {
-            return { description: 'Poor', color: '#ff0000' };
-        } else if (aqi === 5) {
-            return { description: 'Very Poor', color: '#8b00ff' };
-        } else {
-            return { description: 'Unknown', color: '#999999' };
-        }
-    },
+
 
     /**
      * Capitalize first letter of each word
@@ -356,53 +301,7 @@ const Utils = {
         localStorage.setItem('weatherPreferences', JSON.stringify(preferences));
     },
 
-    /**
-     * Get cached weather data
-     * @param {string} key - Cache key
-     * @returns {Object|null} Cached data or null
-     */
-    getCachedData(key) {
-        try {
-            const cached = localStorage.getItem(`weather_cache_${key}`);
-            if (cached) {
-                const data = JSON.parse(cached);
-                const now = Date.now();
-                
-                // Cache valid for 10 minutes
-                if (data.timestamp && now - data.timestamp < 10 * 60 * 1000) {
-                    return data.data;
-                } else {
-                    localStorage.removeItem(`weather_cache_${key}`);
-                }
-            }
-        } catch (error) {
-            console.error('Error reading cached data:', error);
-            try {
-                localStorage.removeItem(`weather_cache_${key}`);
-            } catch (removeError) {
-                console.error('Error removing corrupted cache:', removeError);
-            }
-        }
-        
-        return null;
-    },
 
-    /**
-     * Cache weather data
-     * @param {string} key - Cache key
-     * @param {Object} data - Data to cache
-     */
-    setCachedData(key, data) {
-        try {
-            const cacheData = {
-                data: data,
-                timestamp: Date.now()
-            };
-            localStorage.setItem(`weather_cache_${key}`, JSON.stringify(cacheData));
-        } catch (error) {
-            console.error('Error caching data:', error);
-        }
-    },
 
     /**
      * Animate element entrance

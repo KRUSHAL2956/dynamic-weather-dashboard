@@ -31,8 +31,9 @@ A modern, responsive weather dashboard built with HTML, CSS, and JavaScript that
 
 ### 2. Configure the Application
 
-1. Open `js/config.js`
-2. Replace `YOUR_API_KEY_HERE` with your actual OpenWeatherMap API key:
+1. Copy `js/config.example.js` to `js/config.js`
+2. Open `js/config.js`
+3. Replace `YOUR_API_KEY_HERE` with your actual OpenWeatherMap API key:
 
 ```javascript
 const CONFIG = {
@@ -41,12 +42,16 @@ const CONFIG = {
 };
 ```
 
+**⚠️ IMPORTANT**: Never commit `config.js` with real API keys to version control!
+
 ### 3. Security Considerations
 
 - **Never commit your API key** to version control
 - The `js/config.js` file is included in `.gitignore`
-- For production deployment, consider using environment variables
+- Use `js/config.example.js` as a template
+- For production deployment, use environment variables
 - Regularly rotate your API keys
+- See `SECURITY.md` for detailed security guidelines
 
 ### 4. Local Development
 
@@ -73,7 +78,8 @@ dynamic-weather-dashboard/
 │   ├── style.css          # Main styles
 │   └── responsive.css     # Responsive styles
 ├── js/
-│   ├── config.js          # Configuration (not in git)
+│   ├── config.example.js  # Configuration template
+│   ├── config.js          # Your config (not in git)
 │   ├── utils.js           # Utility functions
 │   ├── weather.js         # Weather API handler
 │   └── app.js             # Main application logic
