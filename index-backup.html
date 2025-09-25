@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Dynamic Weather Dashboard - Real-time weather information for your location">
+    <meta name="keywords" content="weather, forecast, dashboard, real-time, location-based">
+    <meta name="author" content="IBM Frontend Development Intern">
+    <title>Dynamic Weather Dashboard</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Windy API styles will be handled by the API -->
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-spinner">
+            <i class="fas fa-sun spinning"></i>
+            <p>Loading Weather Data...</p>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <h1 class="logo">
+                <i class="fas fa-cloud-sun"></i>
+                Weather Dashboard
+            </h1>
+            <nav class="nav">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="container">
+            <!-- Search Section -->
+            <section class="search-section">
+                <div class="search-container">
+                    <div class="search-box">
+                        <input type="text" id="city-input" placeholder="Search for a city..." autocomplete="off">
+                        <button id="search-btn" class="search-btn">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                    <button id="location-btn" class="location-btn" title="Use current location">
+                        <i class="fas fa-location-dot"></i>
+                        Current Location
+                    </button>
+                </div>
+            </section>
+
+            <!-- Current Weather Section -->
+            <section class="current-weather-section">
+                <div class="current-weather-card" id="current-weather">
+                    <div class="weather-header">
+                        <div class="location-info">
+                            <h2 class="city-name" id="city-name">--</h2>
+                            <p class="date-time" id="date-time">--</p>
+                        </div>
+                        <div class="weather-icon">
+                            <img id="weather-icon" src="" alt="Weather Icon">
+                        </div>
+                    </div>
+                    
+                    <div class="weather-main">
+                        <div class="temperature">
+                            <span class="temp-value" id="temp-value">--</span>
+                            <span class="temp-unit">°C</span>
+                        </div>
+                        <div class="weather-description">
+                            <p id="weather-description">--</p>
+                            <p class="feels-like">Feels like <span id="feels-like">--</span>°C</p>
+                        </div>
+                    </div>
+
+                    <div class="weather-details">
+                        <div class="detail-item">
+                            <i class="fas fa-eye"></i>
+                            <span class="detail-label">Visibility</span>
+                            <span class="detail-value" id="visibility">-- km</span>
+                        </div>
+                        <div class="detail-item">
+                            <i class="fas fa-tint"></i>
+                            <span class="detail-label">Humidity</span>
+                            <span class="detail-value" id="humidity">--%</span>
+                        </div>
+                        <div class="detail-item">
+                            <i class="fas fa-wind"></i>
+                            <span class="detail-label">Wind Speed</span>
+                            <span class="detail-value" id="wind-speed">-- km/h</span>
+                        </div>
+                        <div class="detail-item">
+                            <i class="fas fa-thermometer-half"></i>
+                            <span class="detail-label">Pressure</span>
+                            <span class="detail-value" id="pressure">-- hPa</span>
+                        </div>
+                        <div class="detail-item">
+                            <i class="fas fa-sun"></i>
+                            <span class="detail-label">UV Index</span>
+                            <span class="detail-value" id="uv-index">--</span>
+                        </div>
+                        <div class="detail-item">
+                            <i class="fas fa-cloud"></i>
+                            <span class="detail-label">Cloudiness</span>
+                            <span class="detail-value" id="cloudiness">--%</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Hourly Forecast Section -->
+            <section class="hourly-forecast-section">
+                <h3 class="section-title">
+                    <i class="fas fa-clock"></i>
+                    24-Hour Forecast
+                </h3>
+                <div class="hourly-forecast-container" id="hourly-forecast">
+                    <!-- Hourly forecast items will be dynamically generated -->
+                </div>
+            </section>
+
+            <!-- 5-Day Forecast Section -->
+            <section class="forecast-section">
+                <h3 class="section-title">
+                    <i class="fas fa-calendar-alt"></i>
+                    5-Day Forecast
+                </h3>
+                <div class="forecast-container" id="forecast-container">
+                    <!-- Forecast cards will be dynamically generated -->
+                </div>
+            </section>
+
+            <!-- Weather Map Section -->
+            <section class="map-section">
+                <h3 class="section-title">
+                    <i class="fas fa-map"></i>
+                    Weather Map
+                </h3>
+                <div class="map-container">
+                    <div class="weather-controls">
+                        <h4>Weather Layers</h4>
+                        <button onclick="changeWindyLayer('wind')" class="layer-btn active" id="wind-btn">
+                            <i class="fas fa-wind"></i> Wind
+                        </button>
+                        <button onclick="changeWindyLayer('rain')" class="layer-btn" id="rain-btn">
+                            <i class="fas fa-cloud-rain"></i> Rain
+                        </button>
+                        <button onclick="changeWindyLayer('temp')" class="layer-btn" id="temp-btn">
+                            <i class="fas fa-thermometer-half"></i> Temperature
+                        </button>
+                        <button onclick="changeWindyLayer('clouds')" class="layer-btn" id="clouds-btn">
+                            <i class="fas fa-cloud"></i> Clouds
+                        </button>
+                    </div>
+                    <div id="weather-map" class="weather-map" style="width: 100%; height: 400px; border-radius: 10px; overflow: hidden;">
+                        <!-- Windy map will be initialized here -->
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <p>&copy; 2025 Dynamic Weather Dashboard | Built with HTML, CSS, and JavaScript</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Error Modal -->
+    <div id="error-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-exclamation-triangle"></i> Error</h3>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="error-message">Something went wrong. Please try again.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="modal-ok">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/weather.js"></script>
+    <script src="js/app.js"></script>
+    
+    <!-- Windy map functions -->
+    <script>
+        // Global function for manual map initialization
+        function initMap() {
+            console.log('🗺️ Manual map initialization triggered...');
+            if (window.weatherDashboard) {
+                window.weatherDashboard.initializeWeatherMap();
+            } else {
+                console.error('🗺️ Weather dashboard not available');
+            }
+        }
+        
+        // Global function for changing Windy layers
+        function changeWindyLayer(layerType) {
+            console.log('🗺️ Changing layer to:', layerType);
+            if (window.weatherDashboard && window.weatherDashboard.changeWindyLayer) {
+                window.weatherDashboard.changeWindyLayer(layerType);
+            } else {
+                console.log('🗺️ Dashboard not ready, retrying in 2 seconds...');
+                setTimeout(() => {
+                    if (window.weatherDashboard && window.weatherDashboard.changeWindyLayer) {
+                        window.weatherDashboard.changeWindyLayer(layerType);
+                    }
+                }, 2000);
+            }
+        }
+        
+        // Initialize Windy API when available
+        let windyRetryCount = 0;
+        const maxWindyRetryCount = 20; // Maximum 20 seconds to wait for Windy
+        
+        function initializeWindyAPI() {
+            console.log('🗺️ Checking Windy API availability... (attempt', windyRetryCount + 1, ')');
+            
+            if (typeof windyInit !== 'undefined') {
+                console.log('🗺️ Windy API available, initializing...');
+                
+                const options = {
+                    key: CONFIG.WINDY_API_KEY, // Use key from config
+                    lat: 22.29,
+                    lon: 73.36,
+                    zoom: 6,
+                };
+
+                try {
+                    const windyOptions = {
+                        key: CONFIG.WINDY_API_KEY,
+                        lat: 22.29,
+                        lon: 73.36,
+                        zoom: 6,
+                        overlay: 'wind',
+                        level: 'surface',
+                        menu: [],
+                        graticule: false,
+                        pressure: false,
+                        container: 'weather-map'
+                    };
+                    
+                    windyInit(windyOptions, (windyAPI) => {
+                        console.log('🗺️ Windy API initialized successfully!');
+                        
+                        const { map, store, picker, overlays, utils } = windyAPI;
+                        
+                        // Store references globally for easy access
+                        window.windyMapInstance = map;
+                        window.windyStore = store;
+                        window.windyPicker = picker;
+                        window.windyOverlays = overlays;
+                        window.windyUtils = utils;
+                        
+                        // Set default overlay to wind
+                        store.set('overlay', 'wind');
+                        
+                        console.log('🗺️ Available overlays:', Object.keys(overlays));
+                        
+                        // Open picker at default location
+                        picker.open({ lat: 22.29, lon: 73.36 });
+                        
+                        console.log('🗺️ Windy map setup completed!');
+                        
+                        // Notify weather dashboard that map is ready
+                        if (window.weatherDashboard) {
+                            window.weatherDashboard.windyMap = map;
+                            window.weatherDashboard.windyStore = store;
+                            window.weatherDashboard.windyPicker = picker;
+                            console.log('🗺️ Weather dashboard notified of Windy initialization');
+                        }
+                        
+                        // Update button states
+                        document.getElementById('wind-btn').classList.add('active');
+                    });
+                } catch (error) {
+                    console.error('🗺️ Error initializing Windy:', error);
+                    retryWindyInit();
+                }
+            } else {
+                retryWindyInit();
+            }
+        }
+        
+        function retryWindyInit() {
+            windyRetryCount++;
+            if (windyRetryCount < maxWindyRetryCount) {
+                console.log('🗺️ Windy API not yet available, retrying in 1 second...');
+                setTimeout(initializeWindyAPI, 1000);
+            } else {
+                console.warn('🗺️ Windy API failed to load after', maxWindyRetryCount, 'attempts');
+                showMapFallback();
+            }
+        }
+        
+        function showMapFallback() {
+            console.log('🗺️ Showing map fallback...');
+            const mapContainer = document.getElementById('weather-map');
+            if (mapContainer && window.weatherDashboard) {
+                window.weatherDashboard.initializeFallbackMap();
+            }
+        }
+        
+        // Initialize weather map when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🗺️ DOM ready, initializing weather map...');
+            
+            // Wait for weather dashboard to be ready
+            function initWeatherMap() {
+                if (window.weatherDashboard) {
+                    console.log('🗺️ Weather dashboard available, initializing map...');
+                    // Initialize map after a short delay to ensure everything is loaded
+                    setTimeout(() => {
+                        window.weatherDashboard.initializeWeatherMap();
+                    }, 1000);
+                } else {
+                    console.log('🗺️ Weather dashboard not ready, retrying...');
+                    setTimeout(initWeatherMap, 500);
+                }
+            }
+            
+            initWeatherMap();
+        });
+    </script>
+</body>
+</html>

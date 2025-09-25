@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free Weather APIs Comparison - Rain & Clouds</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .api-section { 
+            background: white; margin: 20px 0; padding: 20px; 
+            border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+        }
+        .api-header { 
+            display: flex; align-items: center; margin-bottom: 15px;
+            border-bottom: 2px solid #eee; padding-bottom: 10px;
+        }
+        .status-badge { 
+            padding: 5px 10px; border-radius: 20px; margin-left: 10px; 
+            font-size: 12px; font-weight: bold; color: white;
+        }
+        .free { background: #28a745; }
+        .paid { background: #dc3545; }
+        .freemium { background: #ffc107; color: black; }
+        #map { height: 400px; width: 100%; margin: 15px 0; border-radius: 8px; }
+        .controls { margin: 15px 0; }
+        .layer-btn { 
+            margin: 5px; padding: 10px 15px; border: none; 
+            background: #007bff; color: white; border-radius: 5px; cursor: pointer;
+            transition: all 0.3s;
+        }
+        .layer-btn:hover { background: #0056b3; }
+        .layer-btn.active { background: #28a745; }
+        .features { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
+        .feature { padding: 8px; background: #f8f9fa; border-radius: 5px; font-size: 14px; }
+        .pros { color: #28a745; }
+        .cons { color: #dc3545; }
+        .demo-controls { background: #e9ecef; padding: 15px; border-radius: 8px; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌧️ Best Free Weather APIs for Rain & Clouds Maps</h1>
+        <p><strong>Date:</strong> September 25, 2025 | <strong>Focus:</strong> Rain & Cloud Visualization</p>
+
+        <!-- OpenWeatherMap -->
+        <div class="api-section">
+            <div class="api-header">
+                <h2>🏆 OpenWeatherMap</h2>
+                <span class="status-badge freemium">FREEMIUM</span>
+                <span class="status-badge free">YOUR KEY WORKS</span>
+            </div>
+            
+            <div class="features">
+                <div class="feature pros">✅ Free tier: 1000 calls/day</div>
+                <div class="feature pros">✅ Multiple weather layers</div>
+                <div class="feature pros">✅ High-quality rain/cloud data</div>
+                <div class="feature pros">✅ Real-time updates</div>
+                <div class="feature pros">✅ No credit card required</div>
+                <div class="feature cons">❌ Limited requests on free tier</div>
+            </div>
+
+            <div class="demo-controls">
+                <strong>🎮 Live Demo - OpenWeatherMap Weather Layers:</strong>
+                <div class="controls">
+                    <button class="layer-btn active" onclick="changeLayer('owm', 'rain')">🌧️ Rain</button>
+                    <button class="layer-btn" onclick="changeLayer('owm', 'clouds')">☁️ Clouds</button>
+                    <button class="layer-btn" onclick="changeLayer('owm', 'wind')">🌪️ Wind</button>
+                    <button class="layer-btn" onclick="changeLayer('owm', 'temp')">🌡️ Temperature</button>
+                </div>
+                <div id="map"></div>
+            </div>
+        </div>
+
+        <!-- Weather API -->
+        <div class="api-section">
+            <div class="api-header">
+                <h2>🌤️ WeatherAPI.com</h2>
+                <span class="status-badge freemium">FREEMIUM</span>
+            </div>
+            
+            <div class="features">
+                <div class="feature pros">✅ Free tier: 1M calls/month</div>
+                <div class="feature pros">✅ Very generous free limits</div>
+                <div class="feature pros">✅ Good rain/cloud data</div>
+                <div class="feature pros">✅ Easy to use</div>
+                <div class="feature cons">❌ Limited map tiles on free tier</div>
+                <div class="feature cons">❌ Requires registration</div>
+            </div>
+            
+            <p><strong>Best for:</strong> Weather data API calls, less focused on map tiles</p>
+        </div>
+
+        <!-- Open-Meteo -->
+        <div class="api-section">
+            <div class="api-header">
+                <h2>🆓 Open-Meteo</h2>
+                <span class="status-badge free">100% FREE</span>
+            </div>
+            
+            <div class="features">
+                <div class="feature pros">✅ Completely free</div>
+                <div class="feature pros">✅ No API key required</div>
+                <div class="feature pros">✅ Unlimited requests</div>
+                <div class="feature pros">✅ Good precipitation data</div>
+                <div class="feature cons">❌ No ready-made map tiles</div>
+                <div class="feature cons">❌ Need to build visualization yourself</div>
+            </div>
+            
+            <p><strong>Best for:</strong> Raw weather data, custom visualizations</p>
+        </div>
+
+        <!-- Visual Crossing -->
+        <div class="api-section">
+            <div class="api-header">
+                <h2>🌈 Visual Crossing</h2>
+                <span class="status-badge freemium">FREEMIUM</span>
+            </div>
+            
+            <div class="features">
+                <div class="feature pros">✅ Free tier: 1000 records/day</div>
+                <div class="feature pros">✅ Historical weather data</div>
+                <div class="feature pros">✅ Good precipitation data</div>
+                <div class="feature cons">❌ Limited map tiles</div>
+                <div class="feature cons">❌ More complex API</div>
+            </div>
+        </div>
+
+        <!-- Recommendation -->
+        <div class="api-section" style="border: 3px solid #28a745;">
+            <div class="api-header">
+                <h2>🏆 RECOMMENDATION FOR YOU</h2>
+            </div>
+            
+            <div style="background: #d4edda; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                <h3>✅ Use OpenWeatherMap (Your Current Setup)</h3>
+                <p><strong>Why it's perfect for rain & clouds:</strong></p>
+                <ul>
+                    <li>🌧️ <strong>Excellent rain data</strong> - Shows precipitation intensity in real-time</li>
+                    <li>☁️ <strong>Perfect cloud coverage</strong> - Detailed cloud layer visualization</li>
+                    <li>🆓 <strong>Your key already works</strong> - No additional setup needed</li>
+                    <li>🎨 <strong>Professional quality</strong> - High-resolution weather tiles</li>
+                    <li>📱 <strong>Mobile friendly</strong> - Responsive design</li>
+                </ul>
+                
+                <p><strong>Free Tier Limits:</strong></p>
+                <ul>
+                    <li>1000 API calls per day (more than enough for personal use)</li>
+                    <li>Weather map tiles included</li>
+                    <li>Real-time updates</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const OWM_API_KEY = 'aab8d6550aa364e3cd595e9bd2c9de8a';
+        let map;
+        let currentWeatherLayer;
+        
+        // Initialize map
+        function initMap() {
+            map = L.map('map').setView([22.2896515, 73.3636423], 8);
+            
+            // Add base layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            
+            // Add default rain layer
+            changeLayer('owm', 'rain');
+            
+            console.log('✅ Weather comparison map initialized');
+        }
+        
+        // Change weather layer
+        function changeLayer(provider, layerType) {
+            console.log(`🗺️ Changing to ${provider} ${layerType} layer`);
+            
+            // Remove existing weather layer
+            if (currentWeatherLayer) {
+                map.removeLayer(currentWeatherLayer);
+            }
+            
+            let tileUrl;
+            
+            if (provider === 'owm') {
+                // OpenWeatherMap tiles
+                switch(layerType) {
+                    case 'rain':
+                        tileUrl = `https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${OWM_API_KEY}`;
+                        break;
+                    case 'clouds':
+                        tileUrl = `https://tile.openweathermap.org/map/clouds_new/{z}/{x}/{y}.png?appid=${OWM_API_KEY}`;
+                        break;
+                    case 'wind':
+                        tileUrl = `https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=${OWM_API_KEY}`;
+                        break;
+                    case 'temp':
+                        tileUrl = `https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=${OWM_API_KEY}`;
+                        break;
+                }
+            }
+            
+            // Add new weather layer
+            currentWeatherLayer = L.tileLayer(tileUrl, {
+                attribution: '© OpenWeatherMap',
+                opacity: 0.7,
+                maxZoom: 18
+            }).addTo(map);
+            
+            // Update button states
+            document.querySelectorAll('.layer-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            console.log(`✅ ${layerType} layer loaded successfully`);
+        }
+        
+        // Initialize when page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            initMap();
+        });
+    </script>
+</body>
+</html>

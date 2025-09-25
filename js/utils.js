@@ -3,6 +3,8 @@
 /**
  * Utility object containing helper functions
  */
+let previouslyFocusedElement;
+
 const Utils = {
     /**
      * Format date and time
@@ -251,6 +253,16 @@ const Utils = {
         if (errorModal && errorMessage) {
             errorMessage.textContent = this.sanitizeText(message);
             errorModal.classList.add('show');
+
+            previouslyFocusedElement = document.activeElement;
+
+            const focusableElements = errorModal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+            const firstFocusableElement = focusableElements[0];
+            const lastFocusableElement = focusableElements[focusableElements.length - 1];
+
+            firstFocusableElement.focus();
+
+            errorModal.addEventListener('keydown', (e) => this.trapFocus(e, firstFocusableElement, lastFocusableElement));
             
             if (duration > 0) {
                 setTimeout(() => {
@@ -267,6 +279,32 @@ const Utils = {
         const errorModal = document.getElementById('error-modal');
         if (errorModal) {
             errorModal.classList.remove('show');
+            errorModal.removeEventListener('keydown', this.trapFocus);
+            if (previouslyFocusedElement) {
+                previouslyFocusedElement.focus();
+            }
+        }
+    },
+
+    /**
+     * Trap focus within a modal
+     * @param {Event} e - The keydown event
+     * @param {HTMLElement} firstFocusableElement - The first focusable element in the modal
+     * @param {HTMLElement} lastFocusableElement - The last focusable element in the modal
+     */
+    trapFocus(e, firstFocusableElement, lastFocusableElement) {
+        if (e.key === 'Tab') {
+            if (e.shiftKey) {
+                if (document.activeElement === firstFocusableElement) {
+                    lastFocusableElement.focus();
+                    e.preventDefault();
+                }
+            } else {
+                if (document.activeElement === lastFocusableElement) {
+                    firstFocusableElement.focus();
+                    e.preventDefault();
+                }
+            }
         }
     },
 

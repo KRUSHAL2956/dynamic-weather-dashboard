@@ -38,11 +38,19 @@ class WeatherDashboard {
             hourlyForecast: document.getElementById('hourly-forecast'),
             forecastContainer: document.getElementById('forecast-container'),
             
+            // Map elements
+            weatherMap: document.getElementById('weather-map'),
+            mapLayerSelect: document.getElementById('map-layer-select'),
+            
             // Modal elements
             errorModal: document.getElementById('error-modal'),
             modalClose: document.getElementById('modal-close'),
             modalOk: document.getElementById('modal-ok')
         };
+        
+        // Weather map reference
+        this.weatherMapRef = null;
+        this.weatherLayer = null;
         
         this.init();
     }
@@ -52,12 +60,10 @@ class WeatherDashboard {
      */
     async init() {
         try {
-            console.log('🌟 Initializing Weather Dashboard...');
             this.setupEventListeners();
             this.applyTheme();
             
-            // Debug: Check if API key is set
-            console.log('🔑 API Key configured:', weatherAPI.isApiKeySet());
+            // Weather map will be initialized automatically by global script
             
             // Try to load weather for user's current location
             await this.loadCurrentLocationWeather();
@@ -121,6 +127,8 @@ class WeatherDashboard {
         window.addEventListener('resize', Utils.debounce(() => {
             this.updateResponsiveLayout();
         }, 250));
+
+        // Weather layers are controlled by buttons in HTML
     }
 
     /**
@@ -195,34 +203,28 @@ class WeatherDashboard {
      */
     async loadCurrentLocationWeather() {
         try {
-            console.log('🌍 Attempting to load current location weather...');
             if (Utils.supportsGeolocation()) {
-                console.log('📍 Geolocation supported, getting position...');
                 const position = await Utils.getCurrentLocation();
-                console.log('📍 Position received:', position.latitude, position.longitude);
                 await this.loadWeatherByCoordinates(position.latitude, position.longitude);
             } else {
-                console.log('📍 Geolocation not supported, using fallback city');
                 // Fallback to a default city if geolocation is not supported
                 await this.loadWeatherByCity('London');
             }
         } catch (error) {
-            console.warn('⚠️ Could not load current location weather:', error);
+            console.warn('Could not load current location weather:', error);
             // Fallback to a default city
             try {
-                console.log('🏙️ Trying fallback city: London');
                 await this.loadWeatherByCity('London');
             } catch (fallbackError) {
-                console.warn('⚠️ Fallback city failed, using demo data:', fallbackError);
+                console.warn('Fallback city failed, using demo data:', fallbackError);
                 // Use demo data as final fallback
                 try {
-                    console.log('🎭 Loading demo data...');
                     const demoData = weatherAPI.getDemoWeatherData();
                     this.weatherData = demoData;
                     await this.updateUI(demoData);
                     Utils.showError('Using demo data. Please check your API key configuration.', 10000);
                 } catch (demoError) {
-                    console.error('❌ Demo data failed:', demoError);
+                    console.error('Demo data failed:', demoError);
                     Utils.showError('Unable to load weather data. Please check your configuration.');
                 }
             }
@@ -235,20 +237,16 @@ class WeatherDashboard {
      */
     async loadWeatherByCity(cityName) {
         try {
-            console.log(`🏙️ Loading weather for city: ${cityName}`);
             this.showLoadingStates();
             
             const weatherData = await weatherAPI.getCompleteWeatherData({ city: cityName });
-            console.log('📊 Weather data received:', weatherData);
             this.weatherData = weatherData;
             this.currentLocation = { city: cityName };
             this.lastUpdateTime = Date.now();
             
             await this.updateUI(weatherData);
-            console.log('✅ UI updated successfully');
             
         } catch (error) {
-            console.error(`❌ Failed to load weather for ${cityName}:`, error);
             throw new Error(`Unable to load weather for "${Utils.sanitizeText(cityName)}". ${error.message}`);
         } finally {
             this.hideLoadingStates();
@@ -283,8 +281,6 @@ class WeatherDashboard {
      * @param {Object} weatherData - Complete weather data
      */
     async updateUI(weatherData) {
-
-        
         // Update current weather
         this.updateCurrentWeather(weatherData.current, weatherData.location);
         
@@ -301,6 +297,9 @@ class WeatherDashboard {
         
         // Update background based on weather
         this.updateBackground(weatherData.current);
+        
+        // Update weather map location if available
+        this.updateMapLocation(weatherData.current);
         
         // Animate elements
         this.animateWeatherUpdates();
@@ -429,20 +428,11 @@ class WeatherDashboard {
             return;
         }
 
-        console.log('Updating hourly forecast with data:', hourlyData.slice(0, 2)); // Debug first 2 items
-
         const hourlyHTML = hourlyData.map(hour => {
             const time = Utils.formatHourlyTime(new Date(hour.dt * 1000));
             const iconUrl = Utils.getWeatherIconUrl(hour.weather?.[0]?.icon || '01d', 'small');
             const description = Utils.sanitizeText(hour.weather?.[0]?.description || 'Weather');
-            
-            // Handle different API formats - One Call API uses 'temp', basic API uses 'main.temp'
-            let temp = '--';
-            if (hour.temp !== undefined) {
-                temp = Math.round(hour.temp); // One Call API format
-            } else if (hour.main?.temp !== undefined) {
-                temp = Math.round(hour.main.temp); // Basic API format
-            }
+            const temp = hour.main?.temp !== undefined ? Math.round(hour.main.temp) : '--';
             
             return `
                 <div class="hourly-item">
@@ -467,28 +457,13 @@ class WeatherDashboard {
             return;
         }
 
-        console.log('Updating daily forecast with data:', dailyData.slice(0, 2)); // Debug first 2 items
-
         const forecastHTML = dailyData.map(day => {
             const dateInfo = Utils.formatForecastDate(new Date(day.dt * 1000));
             const iconUrl = Utils.getWeatherIconUrl(day.weather?.[0]?.icon || '01d', 'medium');
             const description = Utils.capitalizeWords(Utils.sanitizeText(day.weather?.[0]?.description || 'Weather'));
-            
-            // Handle different temperature formats
-            let maxTemp = '--';
-            let minTemp = '--';
-            
-            if (day.temp?.max !== undefined && day.temp?.min !== undefined) {
-                // One Call API format
-                maxTemp = Math.round(day.temp.max);
-                minTemp = Math.round(day.temp.min);
-            } else if (day.main?.temp_max !== undefined && day.main?.temp_min !== undefined) {
-                // Basic API format
-                maxTemp = Math.round(day.main.temp_max);
-                minTemp = Math.round(day.main.temp_min);
-            }
-            
-            const humidity = day.humidity !== undefined ? day.humidity : (day.main?.humidity || '--');
+            const maxTemp = day.temp?.max !== undefined ? Math.round(day.temp.max) : '--';
+            const minTemp = day.temp?.min !== undefined ? Math.round(day.temp.min) : '--';
+            const humidity = day.humidity !== undefined ? day.humidity : '--';
             const windSpeed = day.wind?.speed !== undefined ? Utils.convertWindSpeed(day.wind.speed, 'ms', 'kmh') : '--';
             
             return `
@@ -558,68 +533,6 @@ class WeatherDashboard {
      */
     hideLoadingStates() {
         // Loading states will be cleared when UI is updated with actual data
-    }
-
-    /**
-     * Update weather alerts display (One Call API feature)
-     * @param {Array} alerts - Weather alerts data
-     */
-    updateWeatherAlerts(alerts) {
-        // Create or update alerts container
-        let alertsContainer = document.getElementById('weather-alerts');
-        
-        if (!alertsContainer) {
-            // Create alerts container if it doesn't exist
-            alertsContainer = document.createElement('div');
-            alertsContainer.id = 'weather-alerts';
-            alertsContainer.className = 'weather-alerts';
-            
-            // Insert after the current weather section
-            const currentWeatherSection = document.querySelector('.current-weather');
-            if (currentWeatherSection) {
-                currentWeatherSection.parentNode.insertBefore(alertsContainer, currentWeatherSection.nextSibling);
-            }
-        }
-
-        if (alerts.length === 0) {
-            alertsContainer.style.display = 'none';
-            return;
-        }
-
-        alertsContainer.style.display = 'block';
-        alertsContainer.innerHTML = alerts.map(alert => `
-            <div class="weather-alert alert-${this.getAlertSeverity(alert.event)}">
-                <div class="alert-header">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <h3>${Utils.escapeHtml(alert.event)}</h3>
-                    <span class="alert-time">${Utils.formatDateTime(new Date(alert.start * 1000))}</span>
-                </div>
-                <div class="alert-description">
-                    ${Utils.escapeHtml(alert.description)}
-                </div>
-                <div class="alert-source">
-                    <small>Source: ${Utils.escapeHtml(alert.sender_name)}</small>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    /**
-     * Get alert severity class based on event type
-     * @param {string} event - Alert event type
-     * @returns {string} Severity class
-     */
-    getAlertSeverity(event) {
-        const severeEvents = ['tornado', 'hurricane', 'severe thunderstorm'];
-        const moderateEvents = ['winter storm', 'flood', 'heat'];
-        const event_lower = event.toLowerCase();
-        
-        if (severeEvents.some(severe => event_lower.includes(severe))) {
-            return 'severe';
-        } else if (moderateEvents.some(moderate => event_lower.includes(moderate))) {
-            return 'moderate';
-        }
-        return 'minor';
     }
 
     /**
@@ -726,6 +639,172 @@ class WeatherDashboard {
     }
 
     /**
+     * Update weather map location when weather data changes
+     * @param {Object} weatherData - Current weather data
+     */
+    updateMapLocation(weatherData) {
+        if (!weatherData?.coord) {
+            console.log('🗺️ App: No coordinate data for map update');
+            return;
+        }
+
+        try {
+            const { lat, lon } = weatherData.coord;
+            const cityName = this.elements.cityName.textContent || 'Current Location';
+            
+            // Use global updateMapLocation function if available
+            if (typeof window.updateMapLocation === 'function') {
+                console.log(`🗺️ App: Updating map location to ${cityName} (${lat}, ${lon})`);
+                window.updateMapLocation(lat, lon, cityName);
+            } else {
+                console.log('🗺️ App: Map location update function not available yet');
+            }
+
+        } catch (error) {
+            console.error('🗺️ App: Error updating map location:', error);
+        }
+    }
+
+    /**
+     * Add weather layer to the map
+     * @param {Object} map - Leaflet map instance
+     * @param {string} layerType - Type of weather layer
+     */
+    addWeatherLayer(map, layerType) {
+        console.log('🗺️ Adding weather layer:', layerType);
+        
+        // Remove existing weather layer
+        if (window.currentWeatherLayer) {
+            map.removeLayer(window.currentWeatherLayer);
+        }
+        
+        const apiKey = CONFIG.OPENWEATHER_API_KEY;
+        if (!apiKey) {
+            console.warn('🗺️ No OpenWeatherMap API key available');
+            return;
+        }
+        
+        let tileUrl;
+        switch (layerType) {
+            case 'wind':
+                tileUrl = `https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=${apiKey}`;
+                break;
+            case 'rain':
+                tileUrl = `https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${apiKey}`;
+                break;
+            case 'temp':
+                tileUrl = `https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=${apiKey}`;
+                break;
+            case 'clouds':
+                tileUrl = `https://tile.openweathermap.org/map/clouds_new/{z}/{x}/{y}.png?appid=${apiKey}`;
+                break;
+            default:
+                console.warn('🗺️ Unknown layer type:', layerType);
+                return;
+        }
+        
+        // Add new weather layer
+        window.currentWeatherLayer = L.tileLayer(tileUrl, {
+            attribution: '© OpenWeatherMap',
+            opacity: 0.6,
+            maxZoom: 18
+        }).addTo(map);
+        
+        console.log('🗺️ Weather layer added successfully:', layerType);
+    }
+
+    /**
+     * Fallback map initialization if Windy fails
+     */
+    initializeFallbackMap() {
+        console.log('🗺️ Initializing fallback map...');
+        
+        // Create a simple placeholder if Windy fails
+        this.elements.weatherMap.innerHTML = `
+            <div class="map-fallback">
+                <div class="fallback-content">
+                    <i class="fas fa-map-marked-alt" style="font-size: 48px; color: #666; margin-bottom: 16px;"></i>
+                    <h3>Weather Map</h3>
+                    <p>Interactive weather map is loading...</p>
+                    <button onclick="location.reload()" class="btn btn-primary">Refresh Map</button>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Change weather layer
+     * @param {string} layerType - Type of weather layer (wind, rain, temp, clouds)
+     */
+    changeWindyLayer(layerType) {
+        console.log('🗺️ App: Changing weather layer to:', layerType);
+        
+        // Use global changeWindyLayer function from HTML
+        if (typeof window.changeWindyLayer === 'function') {
+            window.changeWindyLayer(layerType);
+        } else {
+            console.warn('🗺️ App: Global changeWindyLayer function not available');
+        }
+    }
+
+    /**
+     * Update map button states
+     */
+    updateMapButtonStates(activeLayer) {
+        const buttons = document.querySelectorAll('.map-btn');
+        buttons.forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        const activeBtn = document.getElementById(`${activeLayer}-btn`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
+    }
+
+    /**
+     * Change weather layer
+     * @param {string} layerType - New layer type
+     */
+    changeWeatherLayer(layerType) {
+        console.log('🗺️ changeWeatherLayer called with:', layerType);
+        this.addWeatherLayer(layerType);
+    }
+
+    /**
+     * Update weather map with current location
+     * @param {Object} weatherData - Current weather data
+     */
+    updateWeatherMap(weatherData) {
+        console.log('🗺️ App: Updating weather map with data:', !!weatherData);
+        
+        const map = window.leafletMap;
+        
+        if (!map) {
+            console.log('🗺️ App: Weather map not available yet');
+            return;
+        }
+
+        if (!weatherData?.coord) {
+            console.warn('🗺️ App: No coordinate data available');
+            return;
+        }
+
+        try {
+            const { lat, lon } = weatherData.coord;
+            console.log('🗺️ App: Centering map on:', lat, lon);
+            
+            // Center Leaflet map on current location
+            map.setView([lat, lon], 8);
+            
+            console.log('🗺️ App: Weather map updated successfully');
+
+        } catch (error) {
+            console.error('🗺️ App: Failed to update weather map:', error);
+        }
+    }
+
+    /**
      * Get current weather data (for external use)
      * @returns {Object} Current weather data
      */
@@ -734,30 +813,40 @@ class WeatherDashboard {
     }
 }
 
-// Create global instances - will be initialized when DOM loads
-let weatherAPI;
+// Create global instances
+const weatherAPI = new WeatherAPI();
 
 // Initialize the application when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 DOM loaded, starting initialization...');
-    
-    // Create weatherAPI instance after DOM and all scripts are loaded
-    weatherAPI = new WeatherAPI();
-    
     // Check if API key is configured
     if (!weatherAPI.isApiKeySet()) {
-        console.error('❌ API key not configured');
         Utils.showError(
             'Weather API key is not configured. Please add your OpenWeatherMap API key to the config.js file.',
             0 // Don't auto-hide this error
         );
-    } else {
-        console.log('✅ API key configured successfully');
     }
     
     // Initialize the weather dashboard
     window.weatherDashboard = new WeatherDashboard();
 });
+
+// Global map variables
+let globalMap = null;
+let currentWeatherLayer = null;
+
+// Global function to initialize map
+window.initMap = function() {
+    const mapContainer = document.getElementById('weather-map');
+    if (!mapContainer) return;
+    
+    console.log('🗺️ App: Triggering weather map initialization...');
+    
+    // Use the global initMap function from HTML
+    // Weather map initialization is handled by global script in HTML
+    console.log('🗺️ App: Weather map will be initialized automatically');
+};
+
+// Weather layers are now handled by the global functions in index.html
 
 // Handle page visibility change to refresh data when page becomes visible
 document.addEventListener('visibilitychange', () => {
