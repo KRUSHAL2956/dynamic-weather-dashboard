@@ -158,18 +158,85 @@ class WeatherAPI {
             return cachedData;
         }
 
-        // Use One Call API 3.0 for UV index (free tier includes current data)
-        const url = `${this.BASE_URL}/onecall?lat=${lat}&lon=${lon}&appid=${this.API_KEY}&units=metric&exclude=minutely,daily,alerts`;
-        
+        // Try multiple UV index sources (free tier compatible)
         try {
-            const data = await this.makeRequest(url);
-            this.setCachedData(cacheKey, data);
-            return data;
+            // First try the dedicated UV index endpoint (if available in free tier)
+            let url = `${this.BASE_URL}/uvi?lat=${lat}&lon=${lon}&appid=${this.API_KEY}`;
+            
+            try {
+                const uvData = await this.makeRequest(url);
+                const formattedData = {
+                    current: {
+                        uvi: uvData.value || uvData.uvi || uvData
+                    }
+                };
+                this.setCachedData(cacheKey, formattedData);
+                console.log('✅ UV index loaded from UV endpoint:', formattedData.current.uvi);
+                return formattedData;
+            } catch (uvError) {
+                console.log('UV endpoint not available, trying One Call API...');
+                
+                // Fallback to One Call API (may require subscription)
+                url = `${this.BASE_URL}/onecall?lat=${lat}&lon=${lon}&appid=${this.API_KEY}&units=metric&exclude=minutely,daily,alerts`;
+                const oneCallData = await this.makeRequest(url);
+                this.setCachedData(cacheKey, oneCallData);
+                console.log('✅ UV index loaded from One Call API:', oneCallData.current?.uvi);
+                return oneCallData;
+            }
         } catch (error) {
-            // Fallback: if One Call API fails, return null
-            console.warn('UV index data unavailable:', error.message);
-            return null;
+            // All UV sources failed - use estimated UV based on time and conditions
+            console.warn('⚠️ UV index API unavailable, using estimated values');
+            const estimatedUV = this.estimateUVIndex(lat, lon);
+            const simulatedData = {
+                current: { uvi: estimatedUV },
+                simulated: true
+            };
+            this.setCachedData(cacheKey, simulatedData);
+            return simulatedData;
         }
+    }
+
+    /**
+     * Estimate UV index based on time, location, and season
+     * @param {number} lat - Latitude
+     * @param {number} lon - Longitude  
+     * @returns {number} Estimated UV index (0-11)
+     */
+    estimateUVIndex(lat, lon) {
+        const now = new Date();
+        const hour = now.getHours();
+        const month = now.getMonth() + 1; // 1-12
+        
+        // Base UV index estimation for India (lat 8-37°N)
+        let baseUV = 0;
+        
+        // Time-based calculation (UV peaks around noon)
+        if (hour < 6 || hour > 18) {
+            baseUV = 0; // No UV during night
+        } else if (hour >= 10 && hour <= 14) {
+            baseUV = 8; // Peak hours
+        } else if (hour >= 8 && hour <= 16) {
+            baseUV = 6; // Moderate hours
+        } else {
+            baseUV = 3; // Early morning/late afternoon
+        }
+        
+        // Seasonal adjustment for India
+        if (month >= 4 && month <= 6) {
+            baseUV += 2; // Summer months (higher UV)
+        } else if (month >= 11 || month <= 2) {
+            baseUV -= 1; // Winter months (lower UV)
+        }
+        
+        // Latitude adjustment (closer to equator = higher UV)
+        const latFactor = (30 - Math.abs(lat)) / 30; // Normalized for Indian latitudes
+        baseUV += latFactor * 2;
+        
+        // Ensure UV is within valid range (0-11)
+        const estimatedUV = Math.max(0, Math.min(11, Math.round(baseUV * 10) / 10));
+        
+        console.log(`📊 Estimated UV index: ${estimatedUV} (Time: ${hour}:00, Month: ${month}, Lat: ${lat})`);
+        return estimatedUV;
     }
 
     /**

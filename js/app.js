@@ -395,15 +395,26 @@ class WeatherDashboard {
             if (uvData && uvData.current && typeof uvData.current.uvi !== 'undefined') {
                 const uvFormat = Utils.formatUVIndex(uvData.current.uvi);
                 this.elements.uvIndex.textContent = uvFormat.value;
-                this.elements.uvIndex.title = uvFormat.description;
+                
+                // Show different tooltip for estimated vs real data
+                if (uvData.simulated) {
+                    this.elements.uvIndex.title = `${uvFormat.description} (Estimated)`;
+                    this.elements.uvIndex.style.fontStyle = 'italic';
+                    console.log(`📊 UV Index estimated: ${uvFormat.value} (${uvFormat.level})`);
+                } else {
+                    this.elements.uvIndex.title = uvFormat.description;
+                    this.elements.uvIndex.style.fontStyle = 'normal';
+                    console.log(`✅ UV Index loaded: ${uvFormat.value} (${uvFormat.level})`);
+                }
+                
                 this.elements.uvIndex.style.color = uvFormat.color;
                 this.elements.uvIndex.style.fontWeight = 'bold';
-                console.log(`✅ UV Index loaded: ${uvFormat.value} (${uvFormat.level})`);
             } else {
                 this.elements.uvIndex.textContent = '--';
                 this.elements.uvIndex.title = 'UV index data unavailable';
                 this.elements.uvIndex.style.color = '';
                 this.elements.uvIndex.style.fontWeight = '';
+                this.elements.uvIndex.style.fontStyle = '';
                 console.log('⚠️ UV Index data not available');
             }
         }
