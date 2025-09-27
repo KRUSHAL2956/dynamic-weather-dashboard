@@ -172,14 +172,13 @@ class SecureWeatherService {
     // SECURITY: Secure API key retrieval
     getSecureApiKey() {
         // For client-side deployment, get API key from CONFIG
-        if (typeof CONFIG !== 'undefined' && CONFIG.OPENWEATHER_API_KEY) {
-            console.log('✅ API key loaded from CONFIG');
+        if (typeof CONFIG !== 'undefined' && CONFIG.isApiKeyValid()) {
             return CONFIG.OPENWEATHER_API_KEY;
         }
         
-        // Fallback
-        console.warn('⚠️ Using fallback API key');
-        return 'ecd10e5059b846b4977031d32d044f69';
+        // Log error without exposing key
+        console.error('❌ API key not configured properly');
+        throw new Error('Weather service unavailable. Please configure API key.');
     }
 
     // SECURITY: Rate limiting
@@ -314,6 +313,46 @@ class SecureWeatherService {
             
         } catch (error) {
             console.error('Error fetching current weather:', error);
+            throw error;
+        }
+    }
+
+    // SECURITY: Load weather by coordinates (faster than city name)
+    async loadWeatherDataByCoords(lat, lon) {
+        try {
+            const url = new URL(`${this.baseUrl}/weather`);
+            url.searchParams.set('lat', lat.toString());
+            url.searchParams.set('lon', lon.toString());
+            url.searchParams.set('appid', this.apiKey);
+            url.searchParams.set('units', 'metric');
+            
+            const data = await this.makeSecureRequest(url.toString());
+            
+            if (!data.main || !data.weather || !Array.isArray(data.weather)) {
+                throw new Error('Invalid weather data structure');
+            }
+            
+            return {
+                name: Utils.sanitizeText(data.name || 'Current Location'),
+                country: Utils.sanitizeText(data.sys?.country || ''),
+                temp: Number(data.main.temp) || 0,
+                feels_like: Number(data.main.feels_like) || 0,
+                humidity: Number(data.main.humidity) || 0,
+                pressure: Number(data.main.pressure) || 0,
+                visibility: Number(data.visibility) || 0,
+                wind_speed: Number(data.wind?.speed) || 0,
+                wind_deg: Number(data.wind?.deg) || 0,
+                clouds: Number(data.clouds?.all) || 0,
+                uv_index: Number(data.uvi) || 0,
+                description: Utils.sanitizeText(data.weather[0].description || ''),
+                icon: Utils.sanitizeText(data.weather[0].icon || '01d'),
+                main: Utils.sanitizeText(data.weather[0].main || ''),
+                dt: Number(data.dt) || Date.now() / 1000,
+                sunrise: Number(data.sys?.sunrise) || 0,
+                sunset: Number(data.sys?.sunset) || 0
+            };
+        } catch (error) {
+            console.error('Error fetching weather by coordinates:', error);
             throw error;
         }
     }
@@ -474,6 +513,39 @@ class SecureWeatherApp {
                 this.weatherService.getCurrentWeather(city),
                 this.weatherService.getForecast(city)
             ]);
+
+            AppState.setCurrentWeather(currentWeather);
+            AppState.setForecast(forecast);
+
+            this.displayCurrentWeather(currentWeather);
+            this.displayForecast(forecast);
+            this.hideLoadingState();
+
+        } catch (error) {
+            console.error('Weather loading error:', error);
+            Utils.showError(error.message || 'Failed to load weather data');
+            this.hideLoadingState();
+        } finally {
+            AppState.setLoading(false);
+        }
+    }
+
+    // SECURITY: Load weather data by coordinates (faster response)
+    async loadWeatherDataByCoords(lat, lon) {
+        if (AppState.isLoading) {
+            console.log('Already loading weather data');
+            return;
+        }
+
+        try {
+            AppState.setLoading(true);
+            this.showLoadingState();
+
+            // Load current weather by coordinates (faster)
+            const currentWeather = await this.weatherService.loadWeatherDataByCoords(lat, lon);
+            
+            // Load forecast using the city name from current weather
+            const forecast = await this.weatherService.getForecast(currentWeather.name);
 
             AppState.setCurrentWeather(currentWeather);
             AppState.setForecast(forecast);
@@ -750,23 +822,43 @@ class SecureWeatherApp {
         }
     }
 
-    // SECURITY: Safe default location loading
+    // SECURITY: Safe default location loading with faster startup
     async loadDefaultLocation() {
-        // Load a safe default location
-        const defaultCity = 'London';
-        await this.loadWeatherData(defaultCity);
+        try {
+            // Check if geolocation is available for faster local weather
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    async (position) => {
+                        const { latitude, longitude } = position.coords;
+                        // Use coordinates for faster API response
+                        await this.loadWeatherDataByCoords(latitude, longitude);
+                    },
+                    async () => {
+                        // Fallback to default city if geolocation fails
+                        await this.loadWeatherData('Mumbai');
+                    },
+                    { timeout: 3000, enableHighAccuracy: false }
+                );
+            } else {
+                // Load default Indian city for faster relevance
+                await this.loadWeatherData('Mumbai');
+            }
+        } catch (error) {
+            console.error('Error loading default location:', error);
+            await this.loadWeatherData('Mumbai');
+        }
     }
 }
 
-// SECURITY: Safe application initialization
+// SECURITY: Fast application initialization with performance optimizations
 document.addEventListener('DOMContentLoaded', () => {
+    // Performance optimization: Start initialization immediately
+    const startTime = performance.now();
+    
     try {
-        // Hide loading screen
-        const loadingScreen = document.getElementById('loading-screen');
-        if (loadingScreen) {
-            setTimeout(() => {
-                loadingScreen.style.display = 'none';
-            }, 1000);
+        // Validate API key before starting
+        if (!CONFIG.isApiKeyValid()) {
+            throw new Error('API key not configured properly');
         }
         
         // Initialize the secure weather application
@@ -775,15 +867,37 @@ document.addEventListener('DOMContentLoaded', () => {
         // SECURITY: Store app reference safely
         window.weatherApp = Object.freeze(app);
         
-        console.log('Weather Dashboard initialized successfully with security enhancements');
+        // Performance measurement
+        const initTime = performance.now() - startTime;
+        console.log(`🚀 Weather Dashboard initialized in ${initTime.toFixed(2)}ms`);
+        
+        // Hide loading screen after app is ready
+        setTimeout(() => {
+            const loadingScreen = document.getElementById('loading-screen');
+            if (loadingScreen) {
+                loadingScreen.style.transition = 'opacity 0.3s ease';
+                loadingScreen.style.opacity = '0';
+                setTimeout(() => {
+                    loadingScreen.style.display = 'none';
+                }, 300);
+            }
+        }, 500);
+        
     } catch (error) {
         console.error('Failed to initialize Weather Dashboard:', error);
-        Utils.showError('Failed to initialize the application. Please refresh the page.');
         
-        // Hide loading screen even on error
+        // Show user-friendly error
         const loadingScreen = document.getElementById('loading-screen');
         if (loadingScreen) {
-            loadingScreen.style.display = 'none';
+            loadingScreen.innerHTML = `
+                <div style="text-align: center; color: #ff4444;">
+                    <h3>⚠️ Service Unavailable</h3>
+                    <p>Weather service configuration error</p>
+                    <button onclick="location.reload()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                        Retry
+                    </button>
+                </div>
+            `;
         }
     }
 });
