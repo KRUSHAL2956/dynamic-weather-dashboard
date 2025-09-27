@@ -167,6 +167,10 @@ class SecureWeatherService {
         this.requestCount = 0;
         this.requestLimit = 100; // Per hour
         this.lastRequestTime = 0;
+        
+        // Performance: Simple cache for faster repeat requests
+        this.cache = new Map();
+        this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
     }
 
     // SECURITY: Secure API key retrieval
@@ -226,9 +230,9 @@ class SecureWeatherService {
 
     // SECURITY: Safe API request with timeout and validation
     async makeSecureRequest(url) {
-        // SECURITY: Set reasonable timeout
+        // SECURITY: Set reasonable timeout (reduced for faster UX)
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
         
         try {
             const response = await fetch(url, {
@@ -283,6 +287,14 @@ class SecureWeatherService {
     // Get current weather with security validation
     async getCurrentWeather(city) {
         try {
+            // Check cache first for performance
+            const cacheKey = `weather_${city.toLowerCase()}`;
+            const cached = this.cache.get(cacheKey);
+            if (cached && (Date.now() - cached.timestamp) < this.cacheTimeout) {
+                console.log(`⚡ Cache hit for ${city}`);
+                return cached.data;
+            }
+            
             const url = this.buildWeatherUrl(city, 'weather');
             const data = await this.makeSecureRequest(url);
             
@@ -292,7 +304,7 @@ class SecureWeatherService {
             }
             
             // SECURITY: Return sanitized data
-            return {
+            const result = {
                 name: Utils.sanitizeText(data.name || 'Unknown'),
                 country: Utils.sanitizeText(data.sys?.country || ''),
                 temp: Number(data.main.temp) || 0,
@@ -311,6 +323,14 @@ class SecureWeatherService {
                 sunrise: Number(data.sys?.sunrise) || 0,
                 sunset: Number(data.sys?.sunset) || 0
             };
+            
+            // Cache the result for better performance
+            this.cache.set(cacheKey, {
+                data: result,
+                timestamp: Date.now()
+            });
+            
+            return result;
             
         } catch (error) {
             console.error('Error fetching current weather:', error);
@@ -413,15 +433,40 @@ class SecureWeatherApp {
         this.weatherService = new SecureWeatherService();
         this.preferences = Utils.getUserPreferences();
         this.initializeEventListeners();
-        this.loadDefaultLocation();
+        // Defer weather loading to after initialization
+        this.initialized = false;
+    }
+
+    // Initialize app and load weather data
+    async initialize() {
+        if (this.initialized) return;
+        
+        try {
+            await this.loadDefaultLocation();
+            this.initialized = true;
+            console.log('✅ App initialization complete');
+        } catch (error) {
+            console.error('❌ App initialization failed:', error);
+            throw error;
+        }
     }
 
     // SECURITY: Safe event listener initialization
     initializeEventListeners() {
-        // Search form
-        const searchForm = SecureDOM.getElement('#search-form');
-        if (searchForm) {
-            searchForm.addEventListener('submit', (e) => this.handleSearch(e));
+        // Search button
+        const searchBtn = SecureDOM.getElement('#search-btn');
+        if (searchBtn) {
+            searchBtn.addEventListener('click', (e) => this.handleSearch(e));
+        }
+
+        // Search input (Enter key)
+        const cityInput = SecureDOM.getElement('#city-input');
+        if (cityInput) {
+            cityInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.handleSearch(e);
+                }
+            });
         }
 
         // Location button
@@ -480,7 +525,7 @@ class SecureWeatherApp {
     async handleSearch(event) {
         event.preventDefault();
         
-        const searchInput = SecureDOM.getElement('#search-input');
+        const searchInput = SecureDOM.getElement('#city-input');
         if (!searchInput) {
             Utils.showError('Search input not found');
             return;
@@ -920,43 +965,66 @@ class SecureWeatherApp {
     // SECURITY: Safe default location loading with faster startup
     async loadDefaultLocation() {
         try {
+            console.log('🌍 Loading default weather data...');
             // Load default Indian city for faster relevance and guaranteed success
             await this.loadWeatherData('Mumbai');
+            console.log('✅ Default weather data loaded successfully');
         } catch (error) {
-            console.error('Error loading default location:', error);
-            // Final fallback
-            await this.loadWeatherData('Delhi');
+            console.error('⚠️ Error loading Mumbai weather, trying Delhi:', error.message);
+            try {
+                // Final fallback
+                await this.loadWeatherData('Delhi');
+                console.log('✅ Fallback weather data loaded (Delhi)');
+            } catch (fallbackError) {
+                console.error('❌ Failed to load any default weather data:', fallbackError.message);
+                // Show error but don't crash the app
+                Utils.showError('Unable to load weather data. Please search for a city manually.');
+            }
         }
     }
 }
 
 // SECURITY: Fast application initialization with performance optimizations
-document.addEventListener('DOMContentLoaded', () => {
-    // Performance optimization: Start initialization immediately
+document.addEventListener('DOMContentLoaded', async () => {
     const startTime = performance.now();
     
     try {
-        // Initialize the secure weather application
+        // Initialize the secure weather application (fast, no API calls)
         const app = new SecureWeatherApp();
         
         // SECURITY: Store app reference safely
         window.weatherApp = Object.freeze(app);
         
-        // Performance measurement
-        const initTime = performance.now() - startTime;
-        console.log(`🚀 Weather Dashboard initialized in ${initTime.toFixed(2)}ms`);
+        const constructorTime = performance.now() - startTime;
+        console.log(`⚡ App constructor completed in ${constructorTime.toFixed(2)}ms`);
         
-        // Hide loading screen after app is ready
-        setTimeout(() => {
-            const loadingScreen = document.getElementById('loading-screen');
-            if (loadingScreen) {
-                loadingScreen.style.transition = 'opacity 0.3s ease';
-                loadingScreen.style.opacity = '0';
-                setTimeout(() => {
-                    loadingScreen.style.display = 'none';
-                }, 300);
+        // Hide loading screen immediately after DOM setup
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen) {
+            // Update loading message
+            const loadingText = loadingScreen.querySelector('p');
+            if (loadingText) {
+                loadingText.textContent = 'Loading weather data...';
             }
-        }, 800); // Slightly longer delay to ensure weather data loads
+        }
+        
+        // Load weather data asynchronously (won't block UI)
+        const weatherStartTime = performance.now();
+        await app.initialize();
+        const weatherTime = performance.now() - weatherStartTime;
+        console.log(`🌤️ Weather data loaded in ${weatherTime.toFixed(2)}ms`);
+        
+        // Hide loading screen with smooth transition
+        if (loadingScreen) {
+            loadingScreen.style.transition = 'opacity 0.3s ease';
+            loadingScreen.style.opacity = '0';
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+            }, 300);
+        }
+        
+        const totalTime = performance.now() - startTime;
+        console.log(`🚀 Total initialization time: ${totalTime.toFixed(2)}ms`);
         
     } catch (error) {
         console.error('Failed to initialize Weather Dashboard:', error);
@@ -967,7 +1035,7 @@ document.addEventListener('DOMContentLoaded', () => {
             loadingScreen.innerHTML = `
                 <div style="text-align: center; color: #ff4444; padding: 20px;">
                     <h3>⚠️ Loading Error</h3>
-                    <p>Unable to initialize weather dashboard</p>
+                    <p>Unable to initialize weather dashboard: ${error.message}</p>
                     <button onclick="location.reload()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px;">
                         🔄 Retry
                     </button>
