@@ -295,21 +295,34 @@ class WeatherAPI {
         }
 
         try {
-            const url = `${this.GEOCODING_URL}/direct?q=${encodeURIComponent(query)}&limit=${this.validateLimit(limit)}&appid=${this.API_KEY}`;
+            // Increase limit to get more results since we'll filter to India only
+            const searchLimit = Math.min(limit * 3, 20); // Get more results to filter from
+            const url = `${this.GEOCODING_URL}/direct?q=${encodeURIComponent(query)},IN&limit=${this.validateLimit(searchLimit)}&appid=${this.API_KEY}`;
             const data = await this.makeRequest(url);
             
-            // Format the response for easier use
-            const formattedData = data.map(city => ({
+            // Filter results to show only Indian cities and states
+            const indianCities = data.filter(city => 
+                city.country === 'IN' || city.country === 'India'
+            );
+
+            // Format the response for easier use (India-focused)
+            const formattedData = indianCities.map(city => ({
                 name: city.name,
                 country: city.country,
                 state: city.state || '',
                 lat: city.lat,
                 lon: city.lon,
-                displayName: `${city.name}${city.state ? ', ' + city.state : ''}, ${city.country}`
+                displayName: city.state 
+                    ? `${city.name}, ${city.state}` // Show "City, State" for Indian locations
+                    : city.name // Just city name if no state info
             }));
             
-            this.setCachedData(cacheKey, formattedData);
-            return formattedData;
+            // Limit to requested number of results
+            const limitedResults = formattedData.slice(0, limit);
+            
+            console.log(`Found ${limitedResults.length} Indian cities for "${query}"`);
+            this.setCachedData(cacheKey, limitedResults);
+            return limitedResults;
         } catch (error) {
             console.error('City search failed:', error.message);
             throw new Error(`City search failed: ${error.message}`);
