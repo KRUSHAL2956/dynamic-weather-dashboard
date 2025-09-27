@@ -231,7 +231,7 @@
                         .openPopup();
                     
                     // Add weather layer
-                    L.tileLayer('https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=aab8d6550aa364e3cd595e9bd2c9de8a', {
+                    L.tileLayer(`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${API_KEY}`, {
                         attribution: '© OpenWeatherMap',
                         opacity: 0.6
                     }).addTo(map);
@@ -266,8 +266,8 @@
         let currentWeatherLayer = null;
         let mapInitialized = false;
         
-        // API Key - using directly to avoid CONFIG loading issues
-        const API_KEY = 'aab8d6550aa364e3cd595e9bd2c9de8a';
+        // API Key - using CONFIG to avoid exposing keys
+        const API_KEY = CONFIG?.OPENWEATHER_API_KEY || 'YOUR_API_KEY_HERE';
         
         // Layer information and descriptions
         const weatherLayers = {

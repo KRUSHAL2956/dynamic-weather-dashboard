@@ -25,15 +25,15 @@ A modern, responsive weather dashboard built with HTML, CSS, and JavaScript that
 
 ### 1. Get OpenWeatherMap API Key
 
-1. Visit [OpenWeatherMap](https://openweathermap.org/api)
+1. Visit [OpenWeatherMap API](https://openweathermap.org/api)
 2. Sign up for a free account
 3. Generate your API key
 
 ### 2. Configure the Application
 
-1. Copy `js/config.example.js` to `js/config.js`
-2. Open `js/config.js`
-3. Replace `YOUR_API_KEY_HERE` with your actual OpenWeatherMap API key:
+1. Navigate to the project directory
+2. Copy the config template: `cp js/config-template.js js/config.js`
+3. Open `js/config.js` and replace `YOUR_API_KEY_HERE` with your actual OpenWeatherMap API key:
 
 ```javascript
 const CONFIG = {
