@@ -140,6 +140,39 @@ class WeatherAPI {
     }
 
     /**
+     * Get UV index data using One Call API
+     * @param {number} lat - Latitude
+     * @param {number} lon - Longitude
+     * @returns {Promise<Object>} UV index and additional data
+     */
+    async getUVIndex(lat, lon) {
+        if (!this.isApiKeySet()) {
+            throw new Error('API key not configured. Please set your OpenWeatherMap API key.');
+        }
+
+        const cacheKey = this.getCacheKey('uv', `${lat},${lon}`);
+        const cachedData = this.getCachedData(cacheKey);
+        
+        if (cachedData) {
+            console.log('Returning cached UV data for coordinates:', lat, lon);
+            return cachedData;
+        }
+
+        // Use One Call API 3.0 for UV index (free tier includes current data)
+        const url = `${this.BASE_URL}/onecall?lat=${lat}&lon=${lon}&appid=${this.API_KEY}&units=metric&exclude=minutely,daily,alerts`;
+        
+        try {
+            const data = await this.makeRequest(url);
+            this.setCachedData(cacheKey, data);
+            return data;
+        } catch (error) {
+            // Fallback: if One Call API fails, return null
+            console.warn('UV index data unavailable:', error.message);
+            return null;
+        }
+    }
+
+    /**
      * Get 5-day weather forecast for a city
      * @param {string} city - City name
      * @returns {Promise<Object>} 5-day forecast data
@@ -197,17 +230,30 @@ class WeatherAPI {
      */
     async getCompleteWeatherData(location) {
         try {
-            let currentWeather, forecast;
+            let currentWeather, forecast, uvData = null;
 
             if (location.city) {
                 [currentWeather, forecast] = await Promise.all([
                     this.getCurrentWeather(location.city),
                     this.getForecast(location.city)
                 ]);
+                
+                // Get UV index using coordinates from current weather
+                if (currentWeather?.coord) {
+                    try {
+                        uvData = await this.getUVIndex(currentWeather.coord.lat, currentWeather.coord.lon);
+                    } catch (error) {
+                        console.warn('Failed to get UV index:', error.message);
+                    }
+                }
             } else if (location.lat && location.lon) {
-                [currentWeather, forecast] = await Promise.all([
+                [currentWeather, forecast, uvData] = await Promise.all([
                     this.getCurrentWeatherByCoords(location.lat, location.lon),
-                    this.getForecastByCoords(location.lat, location.lon)
+                    this.getForecastByCoords(location.lat, location.lon),
+                    this.getUVIndex(location.lat, location.lon).catch(error => {
+                        console.warn('Failed to get UV index:', error.message);
+                        return null;
+                    })
                 ]);
             } else {
                 throw new Error('Invalid location parameters');
@@ -216,6 +262,7 @@ class WeatherAPI {
             return {
                 current: currentWeather,
                 forecast: forecast,
+                uvData: uvData,
                 timestamp: Date.now()
             };
         } catch (error) {

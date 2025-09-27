@@ -483,6 +483,44 @@ const Utils = {
             default:
                 return `${pressure} hPa`;
         }
+    },
+
+    /**
+     * Format UV index with level description and color coding
+     * @param {number} uvIndex - UV index value
+     * @returns {Object} Object with formatted value, level, and color
+     */
+    formatUVIndex(uvIndex) {
+        if (typeof uvIndex !== 'number' || isNaN(uvIndex)) {
+            return { value: '--', level: 'Unknown', color: '#666' };
+        }
+
+        const rounded = Math.round(uvIndex * 10) / 10;
+        let level, color;
+
+        if (uvIndex <= 2) {
+            level = 'Low';
+            color = '#00e400'; // Green
+        } else if (uvIndex <= 5) {
+            level = 'Moderate';
+            color = '#ffff00'; // Yellow
+        } else if (uvIndex <= 7) {
+            level = 'High';
+            color = '#ff7e00'; // Orange
+        } else if (uvIndex <= 10) {
+            level = 'Very High';
+            color = '#ff0000'; // Red
+        } else {
+            level = 'Extreme';
+            color = '#8b00ff'; // Violet
+        }
+
+        return {
+            value: rounded.toString(),
+            level: level,
+            color: color,
+            description: `UV Index ${rounded} (${level})`
+        };
     }
 };
 

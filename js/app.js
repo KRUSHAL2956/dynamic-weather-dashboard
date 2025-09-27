@@ -285,8 +285,8 @@ class WeatherDashboard {
 
     /** Update UI with weather data */
     async updateUI(weatherData) {
-        // Update current weather
-        this.updateCurrentWeather(weatherData.current, weatherData.location);
+        // Update current weather (include UV data if available)
+        this.updateCurrentWeather(weatherData.current, weatherData.location, weatherData.uvData);
         
         // Update hourly forecast (use forecast data for hourly)
         if (weatherData.forecast && weatherData.forecast.list) {
@@ -314,7 +314,7 @@ class WeatherDashboard {
      * @param {Object} current - Current weather data
      * @param {Object} location - Location data (optional)
      */
-    updateCurrentWeather(current, location = null) {
+    updateCurrentWeather(current, location = null, uvData = null) {
         // Update location display
         if (this.elements.cityName) {
             let locationName = 'Unknown Location';
@@ -392,8 +392,20 @@ class WeatherDashboard {
         }
 
         if (this.elements.uvIndex) {
-            // Note: UV index is not available in basic OpenWeatherMap API
-            this.elements.uvIndex.textContent = '--';
+            if (uvData && uvData.current && typeof uvData.current.uvi !== 'undefined') {
+                const uvFormat = Utils.formatUVIndex(uvData.current.uvi);
+                this.elements.uvIndex.textContent = uvFormat.value;
+                this.elements.uvIndex.title = uvFormat.description;
+                this.elements.uvIndex.style.color = uvFormat.color;
+                this.elements.uvIndex.style.fontWeight = 'bold';
+                console.log(`✅ UV Index loaded: ${uvFormat.value} (${uvFormat.level})`);
+            } else {
+                this.elements.uvIndex.textContent = '--';
+                this.elements.uvIndex.title = 'UV index data unavailable';
+                this.elements.uvIndex.style.color = '';
+                this.elements.uvIndex.style.fontWeight = '';
+                console.log('⚠️ UV Index data not available');
+            }
         }
 
         if (this.elements.cloudiness) {
