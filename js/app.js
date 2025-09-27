@@ -568,19 +568,108 @@ class SecureWeatherApp {
     displayCurrentWeather(data) {
         if (!data) return;
 
-        // Main weather display
-        const weatherDisplay = SecureDOM.getElement('#weather-display');
-        if (weatherDisplay) {
-            // SECURITY: Clear existing content safely
-            weatherDisplay.textContent = '';
-            
-            // SECURITY: Create main weather card safely
-            const mainCard = this.createMainWeatherCard(data);
-            weatherDisplay.appendChild(mainCard);
-        }
+        try {
+            // Update city name and country
+            const cityNameElement = SecureDOM.getElement('#city-name');
+            if (cityNameElement) {
+                const locationText = data.country ? `${data.name}, ${data.country}` : data.name;
+                cityNameElement.textContent = Utils.sanitizeText(locationText);
+            }
 
-        // Update page title safely
-        document.title = `Weather Dashboard - ${Utils.sanitizeText(data.name)}`;
+            // Update date and time
+            const dateTimeElement = SecureDOM.getElement('#date-time');
+            if (dateTimeElement) {
+                const now = new Date();
+                dateTimeElement.textContent = now.toLocaleString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+
+            // Update weather icon
+            const weatherIconElement = SecureDOM.getElement('#weather-icon');
+            if (weatherIconElement && data.icon) {
+                weatherIconElement.src = `https://openweathermap.org/img/wn/${data.icon}@2x.png`;
+                weatherIconElement.alt = Utils.sanitizeText(data.description || 'Weather icon');
+                weatherIconElement.style.display = 'block';
+            }
+
+            // Update temperature
+            const tempValueElement = SecureDOM.getElement('#temp-value');
+            if (tempValueElement) {
+                tempValueElement.textContent = Math.round(data.temp);
+            }
+
+            // Update weather description
+            const weatherDescElement = SecureDOM.getElement('#weather-description');
+            if (weatherDescElement) {
+                weatherDescElement.textContent = Utils.capitalizeWords(data.description || '');
+            }
+
+            // Update feels like temperature
+            const feelsLikeElement = SecureDOM.getElement('#feels-like');
+            if (feelsLikeElement) {
+                feelsLikeElement.textContent = Math.round(data.feels_like);
+            }
+
+            // Update visibility
+            const visibilityElement = SecureDOM.getElement('#visibility');
+            if (visibilityElement) {
+                const visibilityKm = data.visibility ? (data.visibility / 1000).toFixed(1) : '--';
+                visibilityElement.textContent = `${visibilityKm} km`;
+            }
+
+            // Update humidity
+            const humidityElement = SecureDOM.getElement('#humidity');
+            if (humidityElement) {
+                humidityElement.textContent = `${data.humidity || 0}%`;
+            }
+
+            // Update wind speed
+            const windSpeedElement = SecureDOM.getElement('#wind-speed');
+            if (windSpeedElement) {
+                const windKmh = data.wind_speed ? (data.wind_speed * 3.6).toFixed(1) : '0';
+                windSpeedElement.textContent = `${windKmh} km/h`;
+            }
+
+            // Update pressure
+            const pressureElement = SecureDOM.getElement('#pressure');
+            if (pressureElement) {
+                pressureElement.textContent = `${data.pressure || 0} hPa`;
+            }
+
+            // Update UV index
+            const uvIndexElement = SecureDOM.getElement('#uv-index');
+            if (uvIndexElement) {
+                uvIndexElement.textContent = data.uv_index || '--';
+            }
+
+            // Update cloudiness
+            const cloudinessElement = SecureDOM.getElement('#cloudiness');
+            if (cloudinessElement) {
+                cloudinessElement.textContent = `${data.clouds || 0}%`;
+            }
+
+            // Show the current weather card
+            const currentWeatherCard = SecureDOM.getElement('#current-weather');
+            if (currentWeatherCard) {
+                currentWeatherCard.style.display = 'block';
+                currentWeatherCard.style.opacity = '1';
+            }
+
+            // Update page title safely
+            document.title = `Weather Dashboard - ${Utils.sanitizeText(data.name)}`;
+
+            console.log('✅ Weather data displayed successfully');
+
+        } catch (error) {
+            console.error('Error displaying weather data:', error);
+            Utils.showError('Failed to display weather information');
+        }
     }
 
     // SECURITY: Safe main weather card creation
@@ -717,11 +806,11 @@ class SecureWeatherApp {
 
     // SECURITY: Safe loading state management
     showLoadingState() {
-        const weatherDisplay = SecureDOM.getElement('#weather-display');
+        const currentWeatherCard = SecureDOM.getElement('#current-weather');
         const forecastContainer = SecureDOM.getElement('#forecast-container');
         
-        if (weatherDisplay) {
-            Utils.showLoading(weatherDisplay, 'Loading weather data...');
+        if (currentWeatherCard) {
+            Utils.showLoading(currentWeatherCard, 'Loading weather data...');
         }
         
         if (forecastContainer) {
@@ -730,11 +819,11 @@ class SecureWeatherApp {
     }
 
     hideLoadingState() {
-        const weatherDisplay = SecureDOM.getElement('#weather-display');
+        const currentWeatherCard = SecureDOM.getElement('#current-weather');
         const forecastContainer = SecureDOM.getElement('#forecast-container');
         
-        if (weatherDisplay) {
-            Utils.hideLoading(weatherDisplay);
+        if (currentWeatherCard) {
+            Utils.hideLoading(currentWeatherCard);
         }
         
         if (forecastContainer) {
