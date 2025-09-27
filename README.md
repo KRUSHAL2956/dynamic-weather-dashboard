@@ -26,6 +26,10 @@ export OPENWEATHER_API_KEY="your_api_key_here"
 ### 3. Run
 Open `index.html` in your browser or serve via a local web server.
 
+## 🚀 Live Demo
+
+**🌐 Website**: [https://krushal-weather-dashboard.vercel.app/](https://krushal-weather-dashboard.vercel.app/)
+
 ## File Structure
 
 ```
