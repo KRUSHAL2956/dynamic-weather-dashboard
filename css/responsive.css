@@ -52,7 +52,7 @@
     
 
     .search-container {
-        flex-direction: row;
+        flex-direction: column;
         justify-content: center;
         align-items: center;
         gap: var(--spacing-md);
@@ -60,12 +60,7 @@
 
     .search-box-container {
         max-width: 400px;
-    }
         flex-direction: row;
-    }
-    
-    .search-box-container {
-        max-width: 400px;
     }
     
     .current-weather-card {
@@ -128,6 +123,24 @@
         padding: var(--spacing-xl) 0;
     }
     
+    .search-container {
+        flex-direction: column;
+        gap: var(--spacing-lg);
+    }
+    
+    .search-box-container {
+        width: 100%;
+        max-width: none;
+    }
+    
+    .city-suggestions {
+        max-height: 200px;
+        font-size: var(--font-size-sm);
+    }
+    
+    .suggestion-item {
+        padding: var(--spacing-sm) var(--spacing-md);
+    }
     
     .location-btn {
         width: 100%;
@@ -295,6 +308,16 @@
         padding: var(--spacing-sm) var(--spacing-md);
         font-size: var(--font-size-xs);
         gap: var(--spacing-xs);
+    }
+    
+    .city-suggestions {
+        max-height: 150px;
+        font-size: var(--font-size-xs);
+        border-radius: var(--radius-sm);
+    }
+    
+    .suggestion-item {
+        padding: var(--spacing-xs) var(--spacing-sm);
     }
     
     .current-weather-card {
