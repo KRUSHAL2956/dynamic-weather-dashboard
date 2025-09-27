@@ -427,23 +427,27 @@ class SecureWeatherService {
     }
 }
 
+// Private state management for initialization
+const appState = new WeakMap();
+
 // SECURITY: Enhanced application controller
 class SecureWeatherApp {
     constructor() {
         this.weatherService = new SecureWeatherService();
         this.preferences = Utils.getUserPreferences();
         this.initializeEventListeners();
-        // Defer weather loading to after initialization
-        this._isInitialized = false;
+        // Use WeakMap to avoid read-only property issues
+        appState.set(this, { initialized: false });
     }
 
     // Initialize app and load weather data
     async initialize() {
-        if (this._isInitialized) return;
+        const state = appState.get(this);
+        if (state.initialized) return;
         
         try {
             await this.loadDefaultLocation();
-            this._isInitialized = true;
+            state.initialized = true;
             console.log('✅ App initialization complete');
         } catch (error) {
             console.error('❌ App initialization failed:', error);
@@ -991,8 +995,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         // Handle browser extension conflicts gracefully
         window.addEventListener('error', (event) => {
-            if (event.message.includes('ethereum') || event.message.includes('evmAsk')) {
-                console.warn('⚠️ Browser extension conflict detected, continuing initialization...');
+            const message = event.message || '';
+            if (message.includes('ethereum') || 
+                message.includes('evmAsk') || 
+                message.includes('crypto.randomUUID') ||
+                message.includes('inpage.js') ||
+                message.includes('contentscript.js')) {
+                console.warn('⚠️ Browser extension conflict detected:', event.filename || 'unknown', '- ignoring...');
                 event.preventDefault();
                 return false;
             }
@@ -1019,9 +1028,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // Load weather data asynchronously (won't block UI)
         const weatherStartTime = performance.now();
-        await app.initialize();
-        const weatherTime = performance.now() - weatherStartTime;
-        console.log(`🌤️ Weather data loaded in ${weatherTime.toFixed(2)}ms`);
+        try {
+            await app.initialize();
+            const weatherTime = performance.now() - weatherStartTime;
+            console.log(`🌤️ Weather data loaded in ${weatherTime.toFixed(2)}ms`);
+        } catch (initError) {
+            console.warn('⚠️ Partial initialization failure, app still functional:', initError.message);
+            // App is still usable for search and manual operations
+        }
         
         // Hide loading screen with smooth transition
         const hideLoadingScreen = () => {
@@ -1040,11 +1054,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log(`🚀 Total initialization time: ${totalTime.toFixed(2)}ms`);
         
     } catch (error) {
-        console.error('Failed to initialize Weather Dashboard:', error);
+        console.error('Critical failure initializing Weather Dashboard:', error);
         
-        // Hide loading screen and show error
+        // Only show error overlay for critical constructor failures
         const loadingScreen = document.getElementById('loading-screen');
-        if (loadingScreen) {
+        if (loadingScreen && error.message.includes('constructor')) {
             // Still hide the loading screen even on error
             setTimeout(() => {
                 loadingScreen.style.transition = 'opacity 0.3s ease';
@@ -1055,8 +1069,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     document.body.insertAdjacentHTML('beforeend', `
                         <div id="error-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 10000;">
                             <div style="text-align: center; color: #ff4444; padding: 30px; background: white; border-radius: 10px; max-width: 400px;">
-                                <h3>⚠️ Initialization Error</h3>
-                                <p>The weather dashboard encountered an error during startup.</p>
+                                <h3>⚠️ Critical Error</h3>
+                                <p>The weather dashboard failed to start properly.</p>
                                 <p style="font-size: 14px; color: #666; margin: 10px 0;">Error: ${error.message}</p>
                                 <button onclick="location.reload()" style="padding: 12px 24px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 15px; font-size: 16px;">
                                     🔄 Reload Page
@@ -1066,6 +1080,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                     `);
                 }, 300);
             }, 100);
+        } else {
+            // For non-critical errors, just hide loading screen
+            const hideLoadingScreen = () => {
+                if (loadingScreen) {
+                    loadingScreen.style.transition = 'opacity 0.3s ease';
+                    loadingScreen.style.opacity = '0';
+                    setTimeout(() => {
+                        loadingScreen.style.display = 'none';
+                    }, 300);
+                }
+            };
+            hideLoadingScreen();
         }
     }
 });
