@@ -434,16 +434,16 @@ class SecureWeatherApp {
         this.preferences = Utils.getUserPreferences();
         this.initializeEventListeners();
         // Defer weather loading to after initialization
-        this.initialized = false;
+        this._isInitialized = false;
     }
 
     // Initialize app and load weather data
     async initialize() {
-        if (this.initialized) return;
+        if (this._isInitialized) return;
         
         try {
             await this.loadDefaultLocation();
-            this.initialized = true;
+            this._isInitialized = true;
             console.log('✅ App initialization complete');
         } catch (error) {
             console.error('❌ App initialization failed:', error);
@@ -989,6 +989,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     const startTime = performance.now();
     
     try {
+        // Handle browser extension conflicts gracefully
+        window.addEventListener('error', (event) => {
+            if (event.message.includes('ethereum') || event.message.includes('evmAsk')) {
+                console.warn('⚠️ Browser extension conflict detected, continuing initialization...');
+                event.preventDefault();
+                return false;
+            }
+        });
+        
         // Initialize the secure weather application (fast, no API calls)
         const app = new SecureWeatherApp();
         
@@ -1015,13 +1024,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log(`🌤️ Weather data loaded in ${weatherTime.toFixed(2)}ms`);
         
         // Hide loading screen with smooth transition
-        if (loadingScreen) {
-            loadingScreen.style.transition = 'opacity 0.3s ease';
-            loadingScreen.style.opacity = '0';
-            setTimeout(() => {
-                loadingScreen.style.display = 'none';
-            }, 300);
-        }
+        const hideLoadingScreen = () => {
+            if (loadingScreen) {
+                loadingScreen.style.transition = 'opacity 0.3s ease';
+                loadingScreen.style.opacity = '0';
+                setTimeout(() => {
+                    loadingScreen.style.display = 'none';
+                }, 300);
+            }
+        };
+        
+        hideLoadingScreen();
         
         const totalTime = performance.now() - startTime;
         console.log(`🚀 Total initialization time: ${totalTime.toFixed(2)}ms`);
@@ -1029,18 +1042,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (error) {
         console.error('Failed to initialize Weather Dashboard:', error);
         
-        // Show user-friendly error
+        // Hide loading screen and show error
         const loadingScreen = document.getElementById('loading-screen');
         if (loadingScreen) {
-            loadingScreen.innerHTML = `
-                <div style="text-align: center; color: #ff4444; padding: 20px;">
-                    <h3>⚠️ Loading Error</h3>
-                    <p>Unable to initialize weather dashboard: ${error.message}</p>
-                    <button onclick="location.reload()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px;">
-                        🔄 Retry
-                    </button>
-                </div>
-            `;
+            // Still hide the loading screen even on error
+            setTimeout(() => {
+                loadingScreen.style.transition = 'opacity 0.3s ease';
+                loadingScreen.style.opacity = '0';
+                setTimeout(() => {
+                    loadingScreen.style.display = 'none';
+                    // Show error message in the main content area
+                    document.body.insertAdjacentHTML('beforeend', `
+                        <div id="error-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 10000;">
+                            <div style="text-align: center; color: #ff4444; padding: 30px; background: white; border-radius: 10px; max-width: 400px;">
+                                <h3>⚠️ Initialization Error</h3>
+                                <p>The weather dashboard encountered an error during startup.</p>
+                                <p style="font-size: 14px; color: #666; margin: 10px 0;">Error: ${error.message}</p>
+                                <button onclick="location.reload()" style="padding: 12px 24px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 15px; font-size: 16px;">
+                                    🔄 Reload Page
+                                </button>
+                            </div>
+                        </div>
+                    `);
+                }, 300);
+            }, 100);
         }
     }
 });
