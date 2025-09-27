@@ -378,6 +378,43 @@ class SecureWeatherService {
         }
     }
 
+    // SECURITY: Search cities for suggestions
+    async searchCities(query, limit = 5) {
+        if (!query || query.length < 2) return [];
+        
+        try {
+            const cacheKey = `cities_${query.toLowerCase()}`;
+            const cached = this.cache.get(cacheKey);
+            if (cached && (Date.now() - cached.timestamp) < this.cacheTimeout) {
+                return cached.data;
+            }
+            
+            // Use geocoding API for city search
+            const url = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(query)}&limit=${limit}&appid=${this.apiKey}`;
+            const data = await this.makeSecureRequest(url);
+            
+            const cities = data.map(city => ({
+                name: city.name,
+                country: city.country,
+                state: city.state || '',
+                displayName: city.state ? `${city.name}, ${city.state}, ${city.country}` : `${city.name}, ${city.country}`,
+                lat: city.lat,
+                lon: city.lon
+            }));
+            
+            // Cache results
+            this.cache.set(cacheKey, {
+                data: cities,
+                timestamp: Date.now()
+            });
+            
+            return cities;
+        } catch (error) {
+            console.error('City search error:', error);
+            return [];
+        }
+    }
+
     // Get forecast with security validation
     async getForecast(city) {
         try {
@@ -463,13 +500,33 @@ class SecureWeatherApp {
             searchBtn.addEventListener('click', (e) => this.handleSearch(e));
         }
 
-        // Search input (Enter key)
+        // Search input (Enter key and suggestions)
         const cityInput = SecureDOM.getElement('#city-input');
         if (cityInput) {
             cityInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
                     this.handleSearch(e);
                 }
+            });
+            
+            // Add input event for live suggestions
+            let searchTimeout;
+            cityInput.addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                const query = e.target.value.trim();
+                
+                if (query.length >= 2) {
+                    searchTimeout = setTimeout(() => {
+                        this.showCitySuggestions(query);
+                    }, 300); // Debounce 300ms
+                } else {
+                    this.hideCitySuggestions();
+                }
+            });
+            
+            // Hide suggestions when input loses focus
+            cityInput.addEventListener('blur', () => {
+                setTimeout(() => this.hideCitySuggestions(), 150);
             });
         }
 
@@ -529,21 +586,33 @@ class SecureWeatherApp {
     async handleSearch(event) {
         event.preventDefault();
         
+        console.log('🔍 Search triggered');
+        
         const searchInput = SecureDOM.getElement('#city-input');
         if (!searchInput) {
+            console.error('❌ Search input element not found');
             Utils.showError('Search input not found');
             return;
         }
         
         const cityName = searchInput.value.trim();
+        console.log('🏙️ City name entered:', cityName);
+        
+        if (!cityName) {
+            Utils.showError('Please enter a city name');
+            return;
+        }
         
         // SECURITY: Validate city name
         const safeCityName = Utils.validateCityName(cityName);
         if (!safeCityName) {
+            console.error('❌ Invalid city name:', cityName);
             Utils.showError('Please enter a valid city name');
             return;
         }
         
+        console.log('✅ Loading weather for:', safeCityName);
+        this.hideCitySuggestions();
         await this.loadWeatherData(safeCityName);
     }
 
@@ -880,17 +949,89 @@ class SecureWeatherApp {
         }
     }
 
+    // SECURITY: City suggestions functionality
+    async showCitySuggestions(query) {
+        try {
+            console.log('🔍 Searching for cities:', query);
+            const suggestions = await this.weatherService.searchCities ? 
+                await this.weatherService.searchCities(query, 5) : [];
+            
+            const suggestionsContainer = SecureDOM.getElement('#city-suggestions');
+            if (!suggestionsContainer) return;
+            
+            // Clear existing suggestions
+            suggestionsContainer.textContent = '';
+            
+            if (suggestions.length === 0) {
+                suggestionsContainer.classList.add('hidden');
+                return;
+            }
+            
+            // Create suggestion items
+            suggestions.forEach(city => {
+                const suggestionItem = document.createElement('div');
+                suggestionItem.className = 'suggestion-item';
+                suggestionItem.textContent = city.displayName || city.name;
+                suggestionItem.style.padding = '8px 12px';
+                suggestionItem.style.cursor = 'pointer';
+                suggestionItem.style.borderBottom = '1px solid #eee';
+                
+                suggestionItem.addEventListener('click', () => {
+                    const cityInput = SecureDOM.getElement('#city-input');
+                    if (cityInput) {
+                        cityInput.value = city.name;
+                    }
+                    this.hideCitySuggestions();
+                    this.loadWeatherData(city.name);
+                });
+                
+                suggestionItem.addEventListener('mouseover', () => {
+                    suggestionItem.style.backgroundColor = '#f0f8ff';
+                });
+                
+                suggestionItem.addEventListener('mouseout', () => {
+                    suggestionItem.style.backgroundColor = '';
+                });
+                
+                suggestionsContainer.appendChild(suggestionItem);
+            });
+            
+            suggestionsContainer.classList.remove('hidden');
+            
+        } catch (error) {
+            console.error('Error fetching city suggestions:', error);
+            this.hideCitySuggestions();
+        }
+    }
+    
+    hideCitySuggestions() {
+        const suggestionsContainer = SecureDOM.getElement('#city-suggestions');
+        if (suggestionsContainer) {
+            suggestionsContainer.classList.add('hidden');
+            suggestionsContainer.textContent = '';
+        }
+    }
+
     // SECURITY: Safe geolocation handling
     async getCurrentLocationWeather() {
+        const currentWeatherCard = SecureDOM.getElement('#current-weather');
+        
         try {
-            Utils.showLoading(document.body, '📍 Getting your location...');
+            console.log('🌍 Getting current location weather...');
+            
+            if (currentWeatherCard) {
+                Utils.showLoading(currentWeatherCard, '📍 Getting your location...');
+            }
             
             const position = await Utils.getCurrentLocation();
+            console.log('📍 Location obtained:', position);
             
             // Use coordinates to get weather (much more accurate)
             if (position && position.latitude && position.longitude) {
+                console.log('🌤️ Loading weather by coordinates...');
                 await this.loadWeatherDataByCoords(position.latitude, position.longitude);
             } else {
+                console.log('⚠️ No coordinates, using fallback city');
                 // Fallback to a real city if coordinates fail
                 await this.loadWeatherData('Mumbai');
             }
@@ -898,9 +1039,17 @@ class SecureWeatherApp {
         } catch (error) {
             console.error('Geolocation error:', error);
             // Fallback to default city instead of showing error
-            await this.loadWeatherData('Mumbai');
+            console.log('🏙️ Using fallback city due to geolocation error');
+            try {
+                await this.loadWeatherData('Mumbai');
+            } catch (fallbackError) {
+                console.error('Fallback city loading failed:', fallbackError);
+                Utils.showError('Unable to load weather data. Please try searching for a city manually.');
+            }
         } finally {
-            Utils.hideLoading(document.body);
+            if (currentWeatherCard) {
+                Utils.hideLoading(currentWeatherCard);
+            }
         }
     }
 
