@@ -15,7 +15,7 @@ const CONSTANTS = {
         ENTER_CITY: 'Please enter a city name.',
         SEARCH_ERROR: 'Failed to load weather data for the specified city.',
         API_KEY_ERROR: 'API key error. Please check the configuration.',
-        CITY_NOT_FOUND: 'City "{city}" not found. Please check the spelling and try again.',
+        CITY_NOT_FOUND: 'City not found. Please check the spelling and try again.',
         NETWORK_ERROR: 'Network error. Please check your internet connection.',
         INIT_ERROR: 'Failed to initialize the application. Please refresh the page.',
         DEMO_DATA_MESSAGE: 'Using demo data. Please check your API key configuration.',

@@ -18,6 +18,11 @@ class WeatherAPI {
         this.maxRequestsPerMinute = (typeof CONFIG !== 'undefined' && CONFIG.API_RATE_LIMIT) || 60;
         this.cacheHits = 0;
         this.cacheMisses = 0;
+        
+        // Search debouncing variables
+        this.lastSearchQuery = '';
+        this.lastSearchTime = 0;
+        this.lastSearchResults = [];
     }
 
     /** Check if API key is configured */
@@ -78,15 +83,42 @@ class WeatherAPI {
             const sanitizedUrl = url.replace(/appid=[^&]+/, 'appid=***');
             console.log('Making API request to:', sanitizedUrl);
             
-            const response = await fetch(url);
-            const data = await response.json();
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+            
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'User-Agent': 'WeatherDashboard/1.0'
+                },
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
             
             if (!response.ok) {
-                throw new Error(data.message || `HTTP error! status: ${response.status}`);
+                let errorData;
+                try {
+                    errorData = await response.json();
+                } catch (parseError) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
             }
             
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Invalid response format. Expected JSON.');
+            }
+            
+            const data = await response.json();
             return data;
         } catch (error) {
+            if (error.name === 'AbortError') {
+                console.error('API request timed out');
+                throw new Error('Request timed out. Please try again.');
+            }
             console.error('API request failed:', error.message);
             throw new Error(`Weather data request failed: ${error.message}`);
         }
@@ -167,7 +199,7 @@ class WeatherAPI {
                 const uvData = await this.makeRequest(url);
                 const formattedData = {
                     current: {
-                        uvi: uvData.value || uvData.uvi || uvData
+                        uvi: this.parseUVValue(uvData)
                     }
                 };
                 this.setCachedData(cacheKey, formattedData);
@@ -194,6 +226,27 @@ class WeatherAPI {
             this.setCachedData(cacheKey, simulatedData);
             return simulatedData;
         }
+    }
+
+    /**
+     * Parse UV value from API response with proper error handling
+     * @param {*} uvData - UV data from API
+     * @returns {number} Parsed UV index value
+     */
+    parseUVValue(uvData) {
+        if (typeof uvData === 'number' && !isNaN(uvData)) {
+            return Math.max(0, Math.min(11, uvData));
+        }
+        
+        if (typeof uvData === 'object' && uvData !== null) {
+            const uvValue = uvData.value || uvData.uvi || uvData.current?.uvi;
+            if (typeof uvValue === 'number' && !isNaN(uvValue)) {
+                return Math.max(0, Math.min(11, uvValue));
+            }
+        }
+        
+        console.warn('Invalid UV data received, using fallback value');
+        return 0; // Safe fallback
     }
 
     /**
@@ -229,8 +282,10 @@ class WeatherAPI {
         }
         
         // Latitude adjustment (closer to equator = higher UV)
-        const latFactor = (30 - Math.abs(lat)) / 30; // Normalized for Indian latitudes
-        baseUV += latFactor * 2;
+        const INDIAN_LAT_BASELINE = 30; // Northern boundary of India
+        const UV_LAT_MULTIPLIER = 2; // UV increase factor per latitude degree
+        const latFactor = (INDIAN_LAT_BASELINE - Math.abs(lat)) / INDIAN_LAT_BASELINE;
+        baseUV += latFactor * UV_LAT_MULTIPLIER;
         
         // Ensure UV is within valid range (0-11)
         const estimatedUV = Math.max(0, Math.min(11, Math.round(baseUV * 10) / 10));
@@ -311,6 +366,11 @@ class WeatherAPI {
                         uvData = await this.getUVIndex(currentWeather.coord.lat, currentWeather.coord.lon);
                     } catch (error) {
                         console.warn('Failed to get UV index:', error.message);
+                        // Provide fallback UV estimation
+                        uvData = {
+                            current: { uvi: this.estimateUVIndex(currentWeather.coord.lat, currentWeather.coord.lon) },
+                            simulated: true
+                        };
                     }
                 }
             } else if (location.lat && location.lon) {
@@ -339,7 +399,7 @@ class WeatherAPI {
     }
 
     /**
-     * Search for cities using geocoding API
+     * Search for cities using geocoding API with debouncing
      * @param {string} query - City search query
      * @param {number} limit - Maximum number of results (default: 5)
      * @returns {Promise<Array>} Array of city suggestions
@@ -353,43 +413,58 @@ class WeatherAPI {
             return [];
         }
 
-        const cacheKey = this.getCacheKey('cities', query.toLowerCase());
+        // Debounce rapid queries
+        const queryKey = query.toLowerCase().trim();
+        if (this.lastSearchQuery === queryKey && (Date.now() - this.lastSearchTime) < 300) {
+            return this.lastSearchResults || [];
+        }
+
+        const cacheKey = this.getCacheKey('cities', queryKey);
         const cachedData = this.getCachedData(cacheKey);
         
         if (cachedData) {
             console.log('Returning cached city suggestions for:', query);
+            this.lastSearchQuery = queryKey;
+            this.lastSearchTime = Date.now();
+            this.lastSearchResults = cachedData;
             return cachedData;
         }
 
         try {
-            // Increase limit to get more results since we'll filter to India only
-            const searchLimit = Math.min(limit * 3, 20); // Get more results to filter from
-            const url = `${this.GEOCODING_URL}/direct?q=${encodeURIComponent(query)},IN&limit=${this.validateLimit(searchLimit)}&appid=${this.API_KEY}`;
+            // Optimize limit calculation
+            const SEARCH_MULTIPLIER = 3;
+            const MAX_SEARCH_RESULTS = 20;
+            const searchLimit = Math.min(limit * SEARCH_MULTIPLIER, MAX_SEARCH_RESULTS);
+            
+            const encodedQuery = encodeURIComponent(queryKey);
+            const url = `${this.GEOCODING_URL}/direct?q=${encodedQuery},IN&limit=${this.validateLimit(searchLimit)}&appid=${this.API_KEY}`;
             const data = await this.makeRequest(url);
             
-            // Filter results to show only Indian cities and states
-            const indianCities = data.filter(city => 
-                city.country === 'IN' || city.country === 'India'
-            );
-
-            // Format the response for easier use (India-focused)
-            const formattedData = indianCities.map(city => ({
-                name: city.name,
-                country: city.country,
-                state: city.state || '',
-                lat: city.lat,
-                lon: city.lon,
-                displayName: city.state 
-                    ? `${city.name}, ${city.state}` // Show "City, State" for Indian locations
-                    : city.name // Just city name if no state info
-            }));
+            // Filter and format results efficiently
+            const formattedData = data
+                .filter(city => city.country === 'IN' || city.country === 'India')
+                .map(city => {
+                    const displayName = city.state ? `${city.name}, ${city.state}` : city.name;
+                    return {
+                        name: city.name,
+                        country: city.country,
+                        state: city.state || '',
+                        lat: city.lat,
+                        lon: city.lon,
+                        displayName
+                    };
+                })
+                .slice(0, limit);
             
-            // Limit to requested number of results
-            const limitedResults = formattedData.slice(0, limit);
+            console.log(`Found ${formattedData.length} Indian cities for "${query}"`);
             
-            console.log(`Found ${limitedResults.length} Indian cities for "${query}"`);
-            this.setCachedData(cacheKey, limitedResults);
-            return limitedResults;
+            // Cache and store for debouncing
+            this.setCachedData(cacheKey, formattedData);
+            this.lastSearchQuery = queryKey;
+            this.lastSearchTime = Date.now();
+            this.lastSearchResults = formattedData;
+            
+            return formattedData;
         } catch (error) {
             console.error('City search failed:', error.message);
             throw new Error(`City search failed: ${error.message}`);

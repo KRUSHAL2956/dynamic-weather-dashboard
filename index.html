@@ -228,14 +228,19 @@
                         .openPopup();
                     
                     // Add weather layer (check if CONFIG is available)
-                    if (typeof CONFIG !== 'undefined' && CONFIG.OPENWEATHER_API_KEY && CONFIG.OPENWEATHER_API_KEY !== 'YOUR_API_KEY_HERE') {
-                        L.tileLayer(`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${CONFIG.OPENWEATHER_API_KEY}`, {
-                            attribution: '© OpenWeatherMap',
-                            opacity: 0.6
-                        }).addTo(map);
-                        console.log('✅ Weather layer added to map');
+                    if (typeof CONFIG !== 'undefined' && CONFIG.isApiKeyValid()) {
+                        const apiKey = CONFIG.OPENWEATHER_API_KEY;
+                        if (apiKey) {
+                            L.tileLayer(`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${apiKey}`, {
+                                attribution: '© OpenWeatherMap',
+                                opacity: 0.6
+                            }).addTo(map);
+                            console.log('✅ Weather layer added to map');
+                        } else {
+                            console.warn('⚠️ API key validation failed. Map will show base layer only.');
+                        }
                     } else {
-                        console.warn('⚠️ API key not configured. Map will show base layer only.');
+                        console.warn('⚠️ CONFIG not available. Map will show base layer only.');
                     }
                     
                     console.log('✅ Weather map created successfully!');
