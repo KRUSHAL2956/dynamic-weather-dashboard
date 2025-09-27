@@ -1,33 +1,26 @@
-// Weather API Handler for Dynamic Weather Dashboard
+// Weather API Handler - Manages all OpenWeatherMap API interactions
 
 /**
- * Weather API class to handle all weather-related API calls
+ * WeatherAPI - Main class for weather data operations
  */
 class WeatherAPI {
     constructor() {
-        // Load configuration from config file
+        // Initialize API configuration
         this.API_KEY = (typeof CONFIG !== 'undefined' && CONFIG.OPENWEATHER_API_KEY) || 'YOUR_API_KEY_HERE';
         this.BASE_URL = (typeof CONFIG !== 'undefined' && CONFIG.OPENWEATHER_BASE_URL) || 'https://api.openweathermap.org/data/2.5';
         this.GEOCODING_URL = (typeof CONFIG !== 'undefined' && CONFIG.OPENWEATHER_GEOCODING_URL) || 'https://api.openweathermap.org/geo/1.0';
         
-        // Cache settings
+        // Setup caching and rate limiting
         this.CACHE_DURATION = (typeof CONFIG !== 'undefined' && CONFIG.CACHE_DURATION) || 5 * 60 * 1000;
         this.cache = new Map();
-        
-        // Rate limiting
         this.requestCount = 0;
         this.requestWindow = Date.now();
         this.maxRequestsPerMinute = (typeof CONFIG !== 'undefined' && CONFIG.API_RATE_LIMIT) || 60;
-        
-        // Cache statistics
         this.cacheHits = 0;
         this.cacheMisses = 0;
     }
 
-    /**
-     * Check if API key is set
-     * @returns {boolean} Whether API key is configured
-     */
+    /** Check if API key is configured */
     isApiKeySet() {
         return this.API_KEY && 
                this.API_KEY !== 'YOUR_API_KEY_HERE' && 
@@ -35,21 +28,12 @@ class WeatherAPI {
                this.API_KEY.length > 10;
     }
 
-    /**
-     * Generate cache key for requests
-     * @param {string} type - Request type
-     * @param {string} identifier - City name or coordinates
-     * @returns {string} Cache key
-     */
+    /** Generate cache key */
     getCacheKey(type, identifier) {
         return `${type}_${identifier}`;
     }
 
-    /**
-     * Check if cached data is still valid
-     * @param {Object} cacheEntry - Cached data entry
-     * @returns {boolean} Whether cache is valid
-     */
+    /** Check if cached data is still valid */
     isCacheValid(cacheEntry) {
         return cacheEntry && cacheEntry.timestamp && (Date.now() - cacheEntry.timestamp < this.CACHE_DURATION);
     }
@@ -108,11 +92,7 @@ class WeatherAPI {
         }
     }
 
-    /**
-     * Get current weather data for a city
-     * @param {string} city - City name
-     * @returns {Promise<Object>} Current weather data
-     */
+    /** Get current weather for city */
     async getCurrentWeather(city) {
         if (!this.isApiKeySet()) {
             throw new Error('API key not configured. Please set your OpenWeatherMap API key.');
@@ -241,6 +221,51 @@ class WeatherAPI {
         } catch (error) {
             console.error('Error getting complete weather data:', error.message);
             throw error;
+        }
+    }
+
+    /**
+     * Search for cities using geocoding API
+     * @param {string} query - City search query
+     * @param {number} limit - Maximum number of results (default: 5)
+     * @returns {Promise<Array>} Array of city suggestions
+     */
+    async searchCities(query, limit = 5) {
+        if (!this.isApiKeySet()) {
+            throw new Error('API key not configured.');
+        }
+
+        if (!query || query.length < 2) {
+            return [];
+        }
+
+        const cacheKey = this.getCacheKey('cities', query.toLowerCase());
+        const cachedData = this.getCachedData(cacheKey);
+        
+        if (cachedData) {
+            console.log('Returning cached city suggestions for:', query);
+            return cachedData;
+        }
+
+        try {
+            const url = `${this.GEOCODING_URL}/direct?q=${encodeURIComponent(query)}&limit=${this.validateLimit(limit)}&appid=${this.API_KEY}`;
+            const data = await this.makeRequest(url);
+            
+            // Format the response for easier use
+            const formattedData = data.map(city => ({
+                name: city.name,
+                country: city.country,
+                state: city.state || '',
+                lat: city.lat,
+                lon: city.lon,
+                displayName: `${city.name}${city.state ? ', ' + city.state : ''}, ${city.country}`
+            }));
+            
+            this.setCachedData(cacheKey, formattedData);
+            return formattedData;
+        } catch (error) {
+            console.error('City search failed:', error.message);
+            throw new Error(`City search failed: ${error.message}`);
         }
     }
 

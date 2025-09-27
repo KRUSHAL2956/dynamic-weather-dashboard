@@ -1,7 +1,7 @@
-// Main Application JavaScript for Dynamic Weather Dashboard
+// Main Application - Weather Dashboard Controller
 
 /**
- * Main Weather Dashboard Application
+ * WeatherDashboard - Main application class
  */
 class WeatherDashboard {
     constructor() {
@@ -9,6 +9,7 @@ class WeatherDashboard {
         this.weatherData = null;
         this.userPreferences = Utils.getUserPreferences();
         this.lastUpdateTime = null;
+        this.selectedSuggestionIndex = -1;
         
         // DOM Elements
         this.elements = {
@@ -17,6 +18,7 @@ class WeatherDashboard {
             searchBtn: document.getElementById('search-btn'),
             locationBtn: document.getElementById('location-btn'),
             themeToggle: document.getElementById('theme-toggle'),
+            citySuggestions: document.getElementById('city-suggestions'),
             
             // Current weather elements
             cityName: document.getElementById('city-name'),
@@ -55,9 +57,7 @@ class WeatherDashboard {
         this.init();
     }
 
-    /**
-     * Initialize the application
-     */
+    /** Initialize the application */
     async init() {
         try {
             this.setupEventListeners();
@@ -76,9 +76,7 @@ class WeatherDashboard {
         }
     }
 
-    /**
-     * Setup event listeners
-     */
+    /** Setup event listeners */
     setupEventListeners() {
         // Search functionality
         this.elements.searchBtn?.addEventListener('click', () => this.handleSearch());
@@ -88,16 +86,32 @@ class WeatherDashboard {
             }
         });
 
-        // Debounced search as user types
+        // Setup city search with autocomplete
         if (this.elements.cityInput) {
             const debouncedSearch = Utils.debounce((value) => {
-                if (value.length > 2) {
+                if (value.length >= 2) {
                     this.suggestCities(value);
+                } else {
+                    this.hideCitySuggestions();
                 }
             }, 300);
 
             this.elements.cityInput.addEventListener('input', (e) => {
                 debouncedSearch(e.target.value);
+            });
+
+            this.elements.cityInput.addEventListener('keydown', (e) => {
+                this.handleSuggestionKeyboard(e);
+            });
+
+            this.elements.cityInput.addEventListener('blur', () => {
+                setTimeout(() => this.hideCitySuggestions(), 200);
+            });
+
+            this.elements.cityInput.addEventListener('focus', (e) => {
+                if (e.target.value.length >= 2) {
+                    this.suggestCities(e.target.value);
+                }
             });
         }
 
@@ -131,9 +145,7 @@ class WeatherDashboard {
         // Weather layers are controlled by buttons in HTML
     }
 
-    /**
-     * Handle search functionality
-     */
+    /** Handle city search */
     async handleSearch() {
         const cityName = this.elements.cityInput?.value?.trim();
         
@@ -178,9 +190,7 @@ class WeatherDashboard {
         }
     }
 
-    /**
-     * Handle current location functionality
-     */
+    /** Handle current location request */
     async handleCurrentLocation() {
         try {
             Utils.showLoading(this.elements.locationBtn, 'Getting location...');
@@ -231,10 +241,7 @@ class WeatherDashboard {
         }
     }
 
-    /**
-     * Load weather data by city name
-     * @param {string} cityName - Name of the city
-     */
+    /** Load weather by city name */
     async loadWeatherByCity(cityName) {
         try {
             this.showLoadingStates();
@@ -276,10 +283,7 @@ class WeatherDashboard {
         }
     }
 
-    /**
-     * Update UI with weather data
-     * @param {Object} weatherData - Complete weather data
-     */
+    /** Update UI with weather data */
     async updateUI(weatherData) {
         // Update current weather
         this.updateCurrentWeather(weatherData.current, weatherData.location);
@@ -311,7 +315,7 @@ class WeatherDashboard {
      * @param {Object} location - Location data (optional)
      */
     updateCurrentWeather(current, location = null) {
-        // Location and time
+        // Update location display
         if (this.elements.cityName) {
             let locationName = 'Unknown Location';
             
@@ -328,10 +332,25 @@ class WeatherDashboard {
             this.elements.dateTime.textContent = Utils.formatDateTime(new Date());
         }
 
-        // Weather icon
+        // Update weather icon
         if (this.elements.weatherIcon && current.weather?.[0]?.icon) {
-            this.elements.weatherIcon.src = Utils.getWeatherIconUrl(current.weather[0].icon, 'large');
+            const iconCode = current.weather[0].icon;
+            const iconUrl = Utils.getWeatherIconUrl(iconCode, 'large');
+            
+            this.elements.weatherIcon.src = iconUrl;
             this.elements.weatherIcon.alt = current.weather[0].description || 'Weather icon';
+            this.elements.weatherIcon.style.width = '80px';
+            this.elements.weatherIcon.style.height = '80px';
+            this.elements.weatherIcon.style.objectFit = 'contain';
+            
+            this.elements.weatherIcon.onerror = function() {
+                console.warn('Failed to load main weather icon:', iconCode);
+                this.src = 'https://openweathermap.org/img/wn/01d@4x.png';
+            };
+            
+            this.elements.weatherIcon.onload = function() {
+                console.log('Main weather icon loaded:', iconCode);
+            };
         }
 
         // Temperature
@@ -430,7 +449,8 @@ class WeatherDashboard {
 
         const hourlyHTML = hourlyData.map(hour => {
             const time = Utils.formatHourlyTime(new Date(hour.dt * 1000));
-            const iconUrl = Utils.getWeatherIconUrl(hour.weather?.[0]?.icon || '01d', 'small');
+            const iconCode = hour.weather?.[0]?.icon || '01d';
+            const iconUrl = Utils.getWeatherIconUrl(iconCode, 'small');
             const description = Utils.sanitizeText(hour.weather?.[0]?.description || 'Weather');
             const temp = hour.main?.temp !== undefined ? Math.round(hour.main.temp) : '--';
             
@@ -438,7 +458,11 @@ class WeatherDashboard {
                 <div class="hourly-item">
                     <div class="hourly-time">${Utils.escapeHtml(time)}</div>
                     <div class="hourly-icon">
-                        <img src="${Utils.escapeHtml(iconUrl)}" alt="${Utils.escapeHtml(description)}">
+                        <img src="${Utils.escapeHtml(iconUrl)}" 
+                             alt="${Utils.escapeHtml(description)}"
+                             onerror="this.src='https://openweathermap.org/img/wn/01d@2x.png'; this.style.background='rgba(255,99,71,0.1)'; console.warn('Failed to load weather icon: ${iconCode}');"
+                             onload="this.style.opacity='1'; console.log('Hourly icon loaded: ${iconCode}');"
+                             style="width: 40px; height: 40px; object-fit: contain; opacity: 0; transition: opacity 0.3s ease;">
                     </div>
                     <div class="hourly-temp">${Utils.escapeHtml(temp.toString())}°</div>
                 </div>
@@ -446,6 +470,7 @@ class WeatherDashboard {
         }).join('');
 
         this.elements.hourlyForecast.innerHTML = hourlyHTML;
+        console.log('✅ Hourly forecast updated with', hourlyData.length, 'items');
     }
 
     /**
@@ -459,7 +484,8 @@ class WeatherDashboard {
 
         const forecastHTML = dailyData.map(day => {
             const dateInfo = Utils.formatForecastDate(new Date(day.dt * 1000));
-            const iconUrl = Utils.getWeatherIconUrl(day.weather?.[0]?.icon || '01d', 'medium');
+            const iconCode = day.weather?.[0]?.icon || '01d';
+            const iconUrl = Utils.getWeatherIconUrl(iconCode, 'medium');
             const description = Utils.capitalizeWords(Utils.sanitizeText(day.weather?.[0]?.description || 'Weather'));
             const maxTemp = day.temp?.max !== undefined ? Math.round(day.temp.max) : '--';
             const minTemp = day.temp?.min !== undefined ? Math.round(day.temp.min) : '--';
@@ -474,7 +500,11 @@ class WeatherDashboard {
                             <div class="forecast-date">${Utils.escapeHtml(dateInfo.date)}</div>
                         </div>
                         <div class="forecast-icon">
-                            <img src="${Utils.escapeHtml(iconUrl)}" alt="${Utils.escapeHtml(description)}">
+                            <img src="${Utils.escapeHtml(iconUrl)}" 
+                                 alt="${Utils.escapeHtml(description)}"
+                                 onerror="this.src='https://openweathermap.org/img/wn/01d@2x.png'; this.style.background='rgba(255,99,71,0.1)'; console.warn('Failed to load forecast icon: ${iconCode}');"
+                                 onload="this.style.opacity='1'; console.log('Forecast icon loaded: ${iconCode}');"
+                                 style="width: 50px; height: 50px; object-fit: contain; opacity: 0; transition: opacity 0.3s ease;">
                         </div>
                     </div>
                     <div class="forecast-main">
@@ -493,6 +523,7 @@ class WeatherDashboard {
         }).join('');
 
         this.elements.forecastContainer.innerHTML = forecastHTML;
+        console.log('✅ Daily forecast updated with', dailyData.length, 'items');
     }
 
     /**
@@ -603,13 +634,149 @@ class WeatherDashboard {
     }
 
     /**
-     * Suggest cities based on user input (future enhancement)
+     * Suggest cities based on user input
      * @param {string} query - Search query
      */
     async suggestCities(query) {
-        // This would implement city suggestions dropdown
-        // For now, it's a placeholder for future enhancement
-        console.log('City suggestions for:', query);
+        if (!query || query.length < 2) {
+            this.hideCitySuggestions();
+            return;
+        }
+
+        try {
+            console.log('🔍 Getting city suggestions for:', query);
+            const cities = await weatherAPI.searchCities(query, 5);
+            this.displayCitySuggestions(cities);
+        } catch (error) {
+            console.error('City suggestions failed:', error);
+            this.hideCitySuggestions();
+        }
+    }
+
+    /**
+     * Display city suggestions in dropdown
+     * @param {Array} cities - Array of city objects
+     */
+    displayCitySuggestions(cities) {
+        if (!this.elements.citySuggestions || !cities || cities.length === 0) {
+            this.hideCitySuggestions();
+            return;
+        }
+
+        const suggestionsHTML = cities.map((city, index) => {
+            const displayName = Utils.escapeHtml(city.displayName);
+            const cityName = Utils.escapeHtml(city.name);
+            const country = Utils.escapeHtml(city.country);
+            
+            return `
+                <div class="suggestion-item" data-index="${index}" data-city="${Utils.escapeHtml(city.name)}" data-lat="${city.lat}" data-lon="${city.lon}">
+                    <i class="fas fa-map-marker-alt suggestion-icon"></i>
+                    <div>
+                        <div class="suggestion-city">${cityName}</div>
+                        <div class="suggestion-country">${country}${city.state ? ', ' + Utils.escapeHtml(city.state) : ''}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        this.elements.citySuggestions.innerHTML = suggestionsHTML;
+        this.elements.citySuggestions.classList.remove('hidden');
+        
+        // Add click event listeners to suggestions
+        this.elements.citySuggestions.querySelectorAll('.suggestion-item').forEach(item => {
+            item.addEventListener('click', () => {
+                this.selectCitySuggestion(item);
+            });
+        });
+        
+        this.selectedSuggestionIndex = -1;
+        console.log('📋 Displayed', cities.length, 'city suggestions');
+    }
+
+    /**
+     * Hide city suggestions dropdown
+     */
+    hideCitySuggestions() {
+        if (this.elements.citySuggestions) {
+            this.elements.citySuggestions.classList.add('hidden');
+            this.elements.citySuggestions.innerHTML = '';
+        }
+        this.selectedSuggestionIndex = -1;
+    }
+
+    /**
+     * Select a city suggestion
+     * @param {HTMLElement} suggestionElement - The selected suggestion element
+     */
+    async selectCitySuggestion(suggestionElement) {
+        const cityName = suggestionElement.dataset.city;
+        const lat = parseFloat(suggestionElement.dataset.lat);
+        const lon = parseFloat(suggestionElement.dataset.lon);
+        
+        // Update input field
+        this.elements.cityInput.value = cityName;
+        
+        // Hide suggestions
+        this.hideCitySuggestions();
+        
+        // Load weather for selected city using coordinates for better accuracy
+        try {
+            await this.loadWeatherByCoordinates(lat, lon);
+            console.log('✅ Weather loaded for selected city:', cityName);
+        } catch (error) {
+            console.error('Failed to load weather for selected city:', error);
+            Utils.showError(`Failed to load weather for ${cityName}`);
+        }
+    }
+
+    /**
+     * Handle keyboard navigation in city suggestions
+     * @param {Event} e - Keyboard event
+     */
+    handleSuggestionKeyboard(e) {
+        const suggestions = this.elements.citySuggestions?.querySelectorAll('.suggestion-item');
+        if (!suggestions || suggestions.length === 0) return;
+
+        switch (e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                this.selectedSuggestionIndex = Math.min(this.selectedSuggestionIndex + 1, suggestions.length - 1);
+                this.highlightSuggestion(suggestions);
+                break;
+                
+            case 'ArrowUp':
+                e.preventDefault();
+                this.selectedSuggestionIndex = Math.max(this.selectedSuggestionIndex - 1, -1);
+                this.highlightSuggestion(suggestions);
+                break;
+                
+            case 'Enter':
+                e.preventDefault();
+                if (this.selectedSuggestionIndex >= 0 && suggestions[this.selectedSuggestionIndex]) {
+                    this.selectCitySuggestion(suggestions[this.selectedSuggestionIndex]);
+                } else {
+                    this.handleSearch();
+                }
+                break;
+                
+            case 'Escape':
+                this.hideCitySuggestions();
+                break;
+        }
+    }
+
+    /**
+     * Highlight the selected suggestion
+     * @param {NodeList} suggestions - List of suggestion elements
+     */
+    highlightSuggestion(suggestions) {
+        suggestions.forEach((item, index) => {
+            if (index === this.selectedSuggestionIndex) {
+                item.classList.add('highlighted');
+            } else {
+                item.classList.remove('highlighted');
+            }
+        });
     }
 
     /**

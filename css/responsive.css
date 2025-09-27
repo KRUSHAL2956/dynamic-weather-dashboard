@@ -1,6 +1,6 @@
-/* Responsive Design for Dynamic Weather Dashboard */
+/* Responsive Design */
 
-/* Extra Large Screens (1200px and up) */
+/* XL Screens (1200px+) */
 @media (min-width: 1200px) {
     .container {
         max-width: 1400px;
@@ -19,7 +19,7 @@
     }
 }
 
-/* Large Screens (992px to 1199px) */
+/* Large Screens (992px-1199px) */
 @media (max-width: 1199px) {
     .forecast-container {
         grid-template-columns: repeat(3, 1fr);
@@ -30,7 +30,7 @@
     }
 }
 
-/* Medium Screens (768px to 991px) */
+/* Medium Screens (768px-991px) */
 @media (max-width: 991px) {
     .container {
         padding: 0 var(--spacing-md);
@@ -50,14 +50,21 @@
         font-size: var(--font-size-xl);
     }
     
+
     .search-container {
         flex-direction: row;
         justify-content: center;
         align-items: center;
         gap: var(--spacing-md);
     }
+
+    .search-box-container {
+        max-width: 400px;
+    }
+        flex-direction: row;
+    }
     
-    .search-box {
+    .search-box-container {
         max-width: 400px;
     }
     
@@ -115,20 +122,12 @@
     }
 }
 
-/* Small Screens (576px to 767px) */
+/* Small Screens (576px-767px) */
 @media (max-width: 767px) {
     .main {
         padding: var(--spacing-xl) 0;
     }
     
-    .search-container {
-        flex-direction: column;
-        gap: var(--spacing-md);
-    }
-    
-    .search-box {
-        max-width: 100%;
-    }
     
     .location-btn {
         width: 100%;

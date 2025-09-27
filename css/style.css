@@ -1,4 +1,4 @@
-/* CSS Reset and Base Styles */
+/* Dynamic Weather Dashboard - Main Styles */
 * {
     margin: 0;
     padding: 0;
@@ -6,7 +6,7 @@
 }
 
 :root {
-    /* Color Palette */
+    /* Colors */
     --primary-color: #2563eb;
     --secondary-color: #1e40af;
     --accent-color: #f59e0b;
@@ -14,21 +14,18 @@
     --warning-color: #f59e0b;
     --error-color: #ef4444;
     
-    /* Background Colors */
     --bg-primary: #f8fafc;
     --bg-secondary: #ffffff;
     --bg-tertiary: #e2e8f0;
     
-    /* Text Colors */
     --text-primary: #1e293b;
     --text-secondary: #64748b;
     --text-muted: #94a3b8;
     
-    /* Border Colors */
     --border-color: #e2e8f0;
     --border-hover: #cbd5e1;
     
-    /* Shadow */
+    /* Shadows */
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
@@ -70,7 +67,7 @@
     --transition-slow: 500ms ease-in-out;
 }
 
-/* Dark Theme Variables */
+/* Dark Theme */
 [data-theme="dark"] {
     --bg-primary: #0f172a;
     --bg-secondary: #1e293b;
@@ -216,6 +213,12 @@ body {
     align-items: center;
 }
 
+.search-box-container {
+    position: relative;
+    max-width: 500px;
+    width: 100%;
+}
+
 .search-box {
     display: flex;
     background: var(--bg-secondary);
@@ -224,7 +227,6 @@ body {
     overflow: hidden;
     transition: all var(--transition-fast);
     box-shadow: var(--shadow-md);
-    max-width: 500px;
     width: 100%;
 }
 
@@ -259,6 +261,78 @@ body {
 
 .search-btn:hover {
     background: var(--secondary-color);
+}
+
+/* City Suggestions Dropdown */
+.city-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-top: none;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    backdrop-filter: blur(10px);
+}
+
+.city-suggestions.hidden {
+    display: none;
+}
+
+.suggestion-item {
+    padding: var(--spacing-md) var(--spacing-lg);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.suggestion-item:hover {
+    background: var(--primary-color);
+    color: white;
+}
+
+.suggestion-item.highlighted {
+    background: var(--primary-color);
+    color: white;
+}
+
+.suggestion-city {
+    font-weight: 500;
+}
+
+.suggestion-country {
+    color: var(--text-muted);
+    font-size: var(--font-size-sm);
+}
+
+.suggestion-item:hover .suggestion-country {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.suggestion-item.highlighted .suggestion-country {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.suggestion-icon {
+    color: var(--primary-color);
+    font-size: var(--font-size-sm);
+}
+
+.suggestion-item:hover .suggestion-icon,
+.suggestion-item.highlighted .suggestion-icon {
+    color: white;
 }
 
 .location-btn {
@@ -324,6 +398,16 @@ body {
     width: 80px;
     height: 80px;
     object-fit: contain;
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.1);
+    padding: 4px;
+    transition: all var(--transition-fast);
+    box-shadow: var(--shadow-sm);
+}
+
+.weather-icon img:hover {
+    transform: scale(1.05);
+    box-shadow: var(--shadow-md);
 }
 
 .weather-main {
@@ -480,6 +564,16 @@ body {
     width: 40px;
     height: 40px;
     margin-bottom: var(--spacing-sm);
+    object-fit: contain;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px;
+    transition: all var(--transition-fast);
+}
+
+.hourly-icon img:hover {
+    transform: scale(1.1);
+    background: rgba(255, 255, 255, 0.2);
 }
 
 .hourly-temp {
@@ -533,6 +627,16 @@ body {
 .forecast-icon img {
     width: 50px;
     height: 50px;
+    object-fit: contain;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px;
+    transition: all var(--transition-fast);
+}
+
+.forecast-icon img:hover {
+    transform: scale(1.1);
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .forecast-main {

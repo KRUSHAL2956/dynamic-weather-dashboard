@@ -1,17 +1,12 @@
-// Utility Functions for Dynamic Weather Dashboard
+// Utility Functions - Helper methods for the weather dashboard
 
 /**
- * Utility object containing helper functions
+ * Utils - Collection of utility functions
  */
 let previouslyFocusedElement;
 
 const Utils = {
-    /**
-     * Format date and time
-     * @param {Date|string} date - Date object or date string
-     * @param {Object} options - Formatting options
-     * @returns {string} Formatted date string
-     */
+    /** Format date and time */
     formatDateTime(date, options = {}) {
         if (!date) return '--';
         const dateObj = new Date(date);
@@ -65,13 +60,7 @@ const Utils = {
 
 
 
-    /**
-     * Convert wind speed between units
-     * @param {number} speed - Wind speed value
-     * @param {string} from - Source unit ('ms', 'kmh', 'mph')
-     * @param {string} to - Target unit ('ms', 'kmh', 'mph')
-     * @returns {number} Converted wind speed
-     */
+    /** Convert wind speed between units */
     convertWindSpeed(speed, from, to) {
         if (from === to) return Math.round(speed);
         
@@ -109,22 +98,35 @@ const Utils = {
      * @returns {string} Icon URL
      */
     getWeatherIconUrl(iconCode, size = 'medium') {
+        // Validate and sanitize icon code
+        if (!iconCode || typeof iconCode !== 'string') {
+            console.warn('Invalid icon code provided:', iconCode);
+            iconCode = '01d'; // Default sunny day icon
+        }
+        
+        // Remove any potentially harmful characters
+        iconCode = iconCode.replace(/[^a-zA-Z0-9]/g, '');
+        
+        // Ensure icon code is valid format (2-3 characters + d/n)
+        if (!/^\d{2}[dn]$/.test(iconCode)) {
+            console.warn('Invalid icon code format:', iconCode);
+            iconCode = '01d'; // Default to sunny day
+        }
+        
         const sizeMap = {
-            small: '@1x',
+            small: '@2x',   // Changed from @1x for better quality
             medium: '@2x',
             large: '@4x'
         };
         
         const sizeParam = sizeMap[size] || '@2x';
-        return `https://openweathermap.org/img/wn/${iconCode}${sizeParam}.png`;
+        const iconUrl = `https://openweathermap.org/img/wn/${iconCode}${sizeParam}.png`;
+        
+        console.log(`Generated icon URL: ${iconUrl} for code: ${iconCode}`);
+        return iconUrl;
     },
 
-    /**
-     * Get background gradient based on weather condition
-     * @param {string} condition - Weather condition
-     * @param {boolean} isDay - Whether it's day time
-     * @returns {string} CSS gradient
-     */
+    /** Get weather background gradient */
     getWeatherGradient(condition, isDay = true) {
         const gradients = {
             clear: {
@@ -183,11 +185,7 @@ const Utils = {
 
 
 
-    /**
-     * Capitalize first letter of each word
-     * @param {string} str - String to capitalize
-     * @returns {string} Capitalized string
-     */
+    /** Capitalize first letter of each word */
     capitalizeWords(str) {
         return str.replace(/\b\w/g, char => char.toUpperCase());
     },
@@ -241,11 +239,7 @@ const Utils = {
         }
     },
 
-    /**
-     * Show error message
-     * @param {string} message - Error message
-     * @param {number} duration - Duration to show error (ms)
-     */
+    /** Show error message */
     showError(message, duration = 5000) {
         const errorModal = document.getElementById('error-modal');
         const errorMessage = document.getElementById('error-message');

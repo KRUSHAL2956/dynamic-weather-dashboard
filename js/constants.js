@@ -1,4 +1,4 @@
-// Constants for Dynamic Weather Dashboard
+// Constants - Application messages and UI text
 
 const CONSTANTS = {
     MESSAGES: {
