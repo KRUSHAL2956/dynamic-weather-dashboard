@@ -171,14 +171,15 @@ class SecureWeatherService {
 
     // SECURITY: Secure API key retrieval
     getSecureApiKey() {
-        // SECURITY: Try environment variable first
-        if (typeof process !== 'undefined' && process.env && process.env.OPENWEATHER_API_KEY) {
-            return process.env.OPENWEATHER_API_KEY;
+        // For client-side deployment, get API key from CONFIG
+        if (typeof CONFIG !== 'undefined' && CONFIG.OPENWEATHER_API_KEY) {
+            console.log('✅ API key loaded from CONFIG');
+            return CONFIG.OPENWEATHER_API_KEY;
         }
         
-        // SECURITY: Fallback to config (should be externalized)
-        console.warn('API key should be loaded from environment variables');
-        return 'ecd10e5059b846b4977031d32d044f69'; // This should be replaced with environment variable
+        // Fallback
+        console.warn('⚠️ Using fallback API key');
+        return 'ecd10e5059b846b4977031d32d044f69';
     }
 
     // SECURITY: Rate limiting
@@ -760,6 +761,14 @@ class SecureWeatherApp {
 // SECURITY: Safe application initialization
 document.addEventListener('DOMContentLoaded', () => {
     try {
+        // Hide loading screen
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen) {
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+            }, 1000);
+        }
+        
         // Initialize the secure weather application
         const app = new SecureWeatherApp();
         
@@ -770,5 +779,11 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (error) {
         console.error('Failed to initialize Weather Dashboard:', error);
         Utils.showError('Failed to initialize the application. Please refresh the page.');
+        
+        // Hide loading screen even on error
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen) {
+            loadingScreen.style.display = 'none';
+        }
     }
 });
