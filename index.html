@@ -219,20 +219,18 @@
                         .bindPopup('📍 Vadodara, Gujarat')
                         .openPopup();
                     
-                    // Add weather layer (check if CONFIG is available)
-                    if (typeof CONFIG !== 'undefined' && CONFIG.isApiKeyValid()) {
+                    // Add weather layer based on environment
+                    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                    
+                    if (isLocalhost && typeof CONFIG !== 'undefined' && CONFIG.isApiKeyValid()) {
                         const apiKey = CONFIG.OPENWEATHER_API_KEY;
-                        if (apiKey) {
-                            L.tileLayer(`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${apiKey}`, {
-                                attribution: '© OpenWeatherMap',
-                                opacity: 0.6
-                            }).addTo(map);
-                            console.log('✅ Weather layer added to map');
-                        } else {
-                            console.warn('⚠️ API key validation failed. Map will show base layer only.');
-                        }
+                        L.tileLayer(`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${apiKey}`, {
+                            attribution: '© OpenWeatherMap',
+                            opacity: 0.6
+                        }).addTo(map);
+                        console.log('✅ Weather layer added to map');
                     } else {
-                        console.warn('⚠️ CONFIG not available. Map will show base layer only.');
+                        console.log('🌐 Production mode - showing base map layer');
                     }
                     
                     console.log('✅ Weather map created successfully!');
