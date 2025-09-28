@@ -124,52 +124,7 @@ class WeatherAPI {
         }
     }
 
-    /** Get current weather for city */
-    async getCurrentWeather(city) {
-        if (!this.isApiKeySet()) {
-            throw new Error('API key not configured. Please set your OpenWeatherMap API key.');
-        }
 
-        const cacheKey = this.getCacheKey('current', city.toLowerCase());
-        const cachedData = this.getCachedData(cacheKey);
-        
-        if (cachedData) {
-            console.log('Returning cached current weather data for:', city);
-            return cachedData;
-        }
-
-        const url = `${this.BASE_URL}/weather?q=${encodeURIComponent(city)}&appid=${this.API_KEY}&units=metric`;
-        const data = await this.makeRequest(url);
-        
-        this.setCachedData(cacheKey, data);
-        return data;
-    }
-
-    /**
-     * Get current weather data by coordinates
-     * @param {number} lat - Latitude
-     * @param {number} lon - Longitude
-     * @returns {Promise<Object>} Current weather data
-     */
-    async getCurrentWeatherByCoords(lat, lon) {
-        if (!this.isApiKeySet()) {
-            throw new Error('API key not configured. Please set your OpenWeatherMap API key.');
-        }
-
-        const cacheKey = this.getCacheKey('current', `${lat},${lon}`);
-        const cachedData = this.getCachedData(cacheKey);
-        
-        if (cachedData) {
-            console.log('Returning cached current weather data for coordinates:', lat, lon);
-            return cachedData;
-        }
-
-        const url = `${this.BASE_URL}/weather?lat=${lat}&lon=${lon}&appid=${this.API_KEY}&units=metric`;
-        const data = await this.makeRequest(url);
-        
-        this.setCachedData(cacheKey, data);
-        return data;
-    }
 
     /**
      * Get UV index data using One Call API
@@ -295,6 +250,86 @@ class WeatherAPI {
     }
 
     /**
+     * Calculate visibility from weather data
+     * @param {Object} weatherData - Weather data object
+     * @returns {number} Visibility in kilometers
+     */
+    calculateVisibility(weatherData) {
+        if (weatherData.visibility) {
+            return Math.round(weatherData.visibility / 1000); // Convert meters to km
+        }
+        
+        // Estimate visibility based on weather conditions
+        const weather = weatherData.weather?.[0]?.main?.toLowerCase() || '';
+        const humidity = weatherData.main?.humidity || 50;
+        
+        let estimatedVisibility = 10; // Default 10km
+        
+        if (weather.includes('rain') || weather.includes('drizzle')) {
+            estimatedVisibility = 5;
+        } else if (weather.includes('fog') || weather.includes('mist')) {
+            estimatedVisibility = 1;
+        } else if (weather.includes('snow')) {
+            estimatedVisibility = 3;
+        } else if (humidity > 80) {
+            estimatedVisibility = 7;
+        }
+        
+        return estimatedVisibility;
+    }
+
+    /**
+     * Get current weather for a city
+     * @param {string} city - City name
+     * @returns {Promise<Object>} Current weather data
+     */
+    async getCurrentWeather(city) {
+        if (!this.isApiKeySet()) {
+            throw new Error('API key not configured. Please set your OpenWeatherMap API key.');
+        }
+
+        const cacheKey = this.getCacheKey('current', city.toLowerCase());
+        const cachedData = this.getCachedData(cacheKey);
+        
+        if (cachedData) {
+            console.log('Returning cached current weather data for:', city);
+            return cachedData;
+        }
+
+        const url = `${this.BASE_URL}/weather?q=${encodeURIComponent(city)}&appid=${this.API_KEY}&units=metric`;
+        const data = await this.makeRequest(url);
+        
+        this.setCachedData(cacheKey, data);
+        return data;
+    }
+
+    /**
+     * Get current weather by coordinates
+     * @param {number} lat - Latitude
+     * @param {number} lon - Longitude
+     * @returns {Promise<Object>} Current weather data
+     */
+    async getCurrentWeatherByCoords(lat, lon) {
+        if (!this.isApiKeySet()) {
+            throw new Error('API key not configured. Please set your OpenWeatherMap API key.');
+        }
+
+        const cacheKey = this.getCacheKey('current', `${lat},${lon}`);
+        const cachedData = this.getCachedData(cacheKey);
+        
+        if (cachedData) {
+            console.log('Returning cached current weather data for coordinates:', lat, lon);
+            return cachedData;
+        }
+
+        const url = `${this.BASE_URL}/weather?lat=${lat}&lon=${lon}&appid=${this.API_KEY}&units=metric`;
+        const data = await this.makeRequest(url);
+        
+        this.setCachedData(cacheKey, data);
+        return data;
+    }
+
+    /**
      * Get 5-day weather forecast for a city
      * @param {string} city - City name
      * @returns {Promise<Object>} 5-day forecast data
@@ -355,33 +390,11 @@ class WeatherAPI {
             let currentWeather, forecast, uvData = null;
 
             if (location.city) {
-                [currentWeather, forecast] = await Promise.all([
-                    this.getCurrentWeather(location.city),
-                    this.getForecast(location.city)
-                ]);
-                
-                // Get UV index using coordinates from current weather
-                if (currentWeather?.coord) {
-                    try {
-                        uvData = await this.getUVIndex(currentWeather.coord.lat, currentWeather.coord.lon);
-                    } catch (error) {
-                        console.warn('Failed to get UV index:', error.message);
-                        // Provide fallback UV estimation
-                        uvData = {
-                            current: { uvi: this.estimateUVIndex(currentWeather.coord.lat, currentWeather.coord.lon) },
-                            simulated: true
-                        };
-                    }
-                }
+                currentWeather = await this.getCurrentWeather(location.city);
+                forecast = await this.getForecast(location.city);
             } else if (location.lat && location.lon) {
-                [currentWeather, forecast, uvData] = await Promise.all([
-                    this.getCurrentWeatherByCoords(location.lat, location.lon),
-                    this.getForecastByCoords(location.lat, location.lon),
-                    this.getUVIndex(location.lat, location.lon).catch(error => {
-                        console.warn('Failed to get UV index:', error.message);
-                        return null;
-                    })
-                ]);
+                currentWeather = await this.getCurrentWeatherByCoords(location.lat, location.lon);
+                forecast = await this.getForecastByCoords(location.lat, location.lon);
             } else {
                 throw new Error('Invalid location parameters');
             }
@@ -389,7 +402,6 @@ class WeatherAPI {
             return {
                 current: currentWeather,
                 forecast: forecast,
-                uvData: uvData,
                 timestamp: Date.now()
             };
         } catch (error) {
@@ -471,60 +483,7 @@ class WeatherAPI {
         }
     }
 
-    /**
-     * Get demo weather data for testing purposes
-     * @returns {Object} Demo weather data
-     */
-    getDemoWeatherData() {
-        const baseTime = Math.floor(Date.now() / 1000);
-        
-        return {
-            current: {
-                name: "Demo City",
-                sys: { country: "DEMO" },
-                main: {
-                    temp: 22,
-                    feels_like: 24,
-                    humidity: 65,
-                    pressure: 1013
-                },
-                weather: [{
-                    main: "Clear",
-                    description: "clear sky",
-                    icon: "01d"
-                }],
-                wind: {
-                    speed: 3.5,
-                    deg: 180
-                },
-                visibility: 10000,
-                clouds: {
-                    all: 0
-                },
-                coord: {
-                    lat: 40.7128,
-                    lon: -74.0060
-                },
-                dt: baseTime
-            },
-            forecast: {
-                list: Array.from({ length: 40 }, (_, i) => ({
-                    dt: baseTime + (i * 3 * 3600),
-                    main: { 
-                        temp: 22 + Math.sin(i * 0.5) * 5,
-                        humidity: 60 + Math.sin(i * 0.3) * 10
-                    },
-                    weather: [{ 
-                        main: "Clear", 
-                        description: "clear sky", 
-                        icon: i % 8 < 4 ? "01d" : "01n"
-                    }],
-                    wind: { speed: 2.5 + Math.random() * 2 }
-                }))
-            },
-            timestamp: Date.now()
-        };
-    }
+
     
     /**
      * Check rate limiting

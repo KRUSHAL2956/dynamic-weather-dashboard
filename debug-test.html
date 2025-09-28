@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background-color: #d4edda; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; border: 1px solid #f5c6cb; }
+    </style>
+</head>
+<body>
+    <h1>Weather App Debug Test</h1>
+    <div id="test-results"></div>
+    
+    <script>
+        const results = document.getElementById('test-results');
+        
+        function addResult(message, success = true) {
+            const div = document.createElement('div');
+            div.className = `test-result ${success ? 'success' : 'error'}`;
+            div.textContent = message;
+            results.appendChild(div);
+        }
+        
+        // Test 1: Check if basic elements exist
+        addResult('Testing element existence...');
+        
+        const cityElement = document.querySelector('#city-name');
+        const tempElement = document.querySelector('#temp-value');
+        const descElement = document.querySelector('#weather-description');
+        
+        if (cityElement) {
+            addResult('✅ City element found');
+        } else {
+            addResult('❌ City element NOT found', false);
+        }
+        
+        if (tempElement) {
+            addResult('✅ Temperature element found');
+        } else {
+            addResult('❌ Temperature element NOT found', false);
+        }
+        
+        if (descElement) {
+            addResult('✅ Description element found');
+        } else {
+            addResult('❌ Description element NOT found', false);
+        }
+        
+        // Test 2: Try setting values directly
+        if (cityElement) {
+            cityElement.textContent = 'Test City';
+            addResult('✅ Set city text successfully');
+        }
+        
+        if (tempElement) {
+            tempElement.textContent = '25°C';
+            addResult('✅ Set temperature text successfully');
+        }
+        
+        if (descElement) {
+            descElement.textContent = 'Test Description';
+            addResult('✅ Set description text successfully');
+        }
+        
+        // Test 3: Check visibility
+        setTimeout(() => {
+            if (cityElement && cityElement.textContent === 'Test City') {
+                addResult('✅ City text is visible and correct');
+            } else {
+                addResult('❌ City text not visible or incorrect', false);
+            }
+            
+            if (tempElement && tempElement.textContent === '25°C') {
+                addResult('✅ Temperature text is visible and correct');
+            } else {
+                addResult('❌ Temperature text not visible or incorrect', false);
+            }
+            
+            if (descElement && descElement.textContent === 'Test Description') {
+                addResult('✅ Description text is visible and correct');
+            } else {
+                addResult('❌ Description text not visible or incorrect', false);
+            }
+        }, 500);
+    </script>
+</body>
+</html>

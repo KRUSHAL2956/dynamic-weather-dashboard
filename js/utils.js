@@ -289,24 +289,7 @@ const Utils = {
         return gradients[weatherType]?.[timeOfDay] || gradients.clear[timeOfDay];
     },
 
-    /** Get UV index description and color - SECURITY: Input validation */
-    getUVIndexInfo(uvIndex) {
-        if (typeof uvIndex !== 'number' || isNaN(uvIndex) || uvIndex < 0 || uvIndex > 20) {
-            return { description: 'Unknown', color: '#999999' };
-        }
-        
-        if (uvIndex <= 2) {
-            return { description: 'Low', color: '#00e400' };
-        } else if (uvIndex <= 5) {
-            return { description: 'Moderate', color: '#ffff00' };
-        } else if (uvIndex <= 7) {
-            return { description: 'High', color: '#ff7e00' };
-        } else if (uvIndex <= 10) {
-            return { description: 'Very High', color: '#ff0000' };
-        } else {
-            return { description: 'Extreme', color: '#8b00ff' };
-        }
-    },
+
 
     /** Capitalize first letter of each word - SECURITY: Input validation */
     capitalizeWords(str) {
