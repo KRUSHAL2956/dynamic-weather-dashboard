@@ -36,16 +36,28 @@ const SecureDOM = {
     // SECURITY FIX: Safe element selection with validation
     getElement(selector) {
         if (!selector || typeof selector !== 'string') {
-            console.error('Invalid selector provided');
+            console.error('Invalid selector provided:', selector);
             return null;
         }
         
         try {
             // SECURITY: Prevent CSS injection in selectors
             const sanitizedSelector = selector.replace(/['"\\]/g, '');
-            return document.querySelector(sanitizedSelector);
+            const element = document.querySelector(sanitizedSelector);
+            
+            if (!element) {
+                console.warn(`⚠️ Element not found with selector: ${sanitizedSelector}`);
+                // Try direct querySelector as fallback
+                const directElement = document.querySelector(selector);
+                if (directElement) {
+                    console.log(`✅ Found element with direct querySelector: ${selector}`);
+                    return directElement;
+                }
+            }
+            
+            return element;
         } catch (error) {
-            console.error('Error selecting element:', error);
+            console.error('Error selecting element:', selector, error);
             return null;
         }
     },
@@ -682,6 +694,27 @@ class SecureWeatherApp {
         }
     }
 
+    // Helper function to reliably get elements
+    getReliableElement(selector) {
+        // Try SecureDOM first
+        let element = SecureDOM.getElement(selector);
+        if (element) return element;
+        
+        // Try direct querySelector
+        element = document.querySelector(selector);
+        if (element) return element;
+        
+        // For ID selectors, try getElementById
+        if (selector.startsWith('#')) {
+            const id = selector.substring(1);
+            element = document.getElementById(id);
+            if (element) return element;
+        }
+        
+        console.error(`❌ Element not found: ${selector}`);
+        return null;
+    }
+
     // SECURITY FIX: Safe current weather display (fixes XSS in lines 495, 548, 705)
     displayCurrentWeather(data) {
         if (!data) {
@@ -693,17 +726,15 @@ class SecureWeatherApp {
 
         try {
             // Update city name and country
-            const cityNameElement = SecureDOM.getElement('#city-name');
+            const cityNameElement = this.getReliableElement('#city-name');
             if (cityNameElement) {
                 const locationText = data.country ? `${data.name}, ${data.country}` : data.name;
                 cityNameElement.textContent = Utils.sanitizeText(locationText);
                 console.log('🏙️ Updated city name:', locationText);
-            } else {
-                console.error('❌ City name element not found');
             }
 
             // Update date and time
-            const dateTimeElement = SecureDOM.getElement('#date-time');
+            const dateTimeElement = this.getReliableElement('#date-time');
             if (dateTimeElement) {
                 const now = new Date();
                 dateTimeElement.textContent = now.toLocaleString('en-US', {
@@ -714,85 +745,91 @@ class SecureWeatherApp {
                     hour: '2-digit',
                     minute: '2-digit'
                 });
+                console.log('📅 Updated date and time');
             }
 
             // Update weather icon
-            const weatherIconElement = SecureDOM.getElement('#weather-icon');
+            const weatherIconElement = this.getReliableElement('#weather-icon');
             if (weatherIconElement && data.icon) {
                 weatherIconElement.src = `https://openweathermap.org/img/wn/${data.icon}@2x.png`;
                 weatherIconElement.alt = Utils.sanitizeText(data.description || 'Weather icon');
                 weatherIconElement.style.display = 'block';
+                console.log('🌦️ Updated weather icon:', data.icon);
             }
 
             // Update temperature
-            const tempValueElement = SecureDOM.getElement('#temp-value');
+            const tempValueElement = this.getReliableElement('#temp-value');
             if (tempValueElement) {
                 const roundedTemp = Math.round(data.temp);
                 tempValueElement.textContent = roundedTemp;
                 console.log('🌡️ Updated temperature:', roundedTemp + '°C');
-            } else {
-                console.error('❌ Temperature element not found');
             }
 
             // Update weather description
-            const weatherDescElement = SecureDOM.getElement('#weather-description');
+            const weatherDescElement = this.getReliableElement('#weather-description');
             if (weatherDescElement) {
                 weatherDescElement.textContent = Utils.capitalizeWords(data.description || '');
+                console.log('📝 Updated weather description:', data.description);
             }
 
             // Update feels like temperature
-            const feelsLikeElement = SecureDOM.getElement('#feels-like');
+            const feelsLikeElement = this.getReliableElement('#feels-like');
             if (feelsLikeElement) {
                 feelsLikeElement.textContent = Math.round(data.feels_like);
+                console.log('🌡️ Updated feels like:', Math.round(data.feels_like) + '°C');
             }
 
             // Update visibility
-            const visibilityElement = SecureDOM.getElement('#visibility');
+            const visibilityElement = this.getReliableElement('#visibility');
             if (visibilityElement) {
                 const visibilityKm = data.visibility ? (data.visibility / 1000).toFixed(1) : '--';
                 visibilityElement.textContent = `${visibilityKm} km`;
+                console.log('👁️ Updated visibility:', visibilityKm + ' km');
             }
 
             // Update humidity
-            const humidityElement = SecureDOM.getElement('#humidity');
+            const humidityElement = this.getReliableElement('#humidity');
             if (humidityElement) {
                 humidityElement.textContent = `${data.humidity || 0}%`;
+                console.log('💧 Updated humidity:', data.humidity + '%');
             }
 
             // Update wind speed
-            const windSpeedElement = SecureDOM.getElement('#wind-speed');
+            const windSpeedElement = this.getReliableElement('#wind-speed');
             if (windSpeedElement) {
                 const windKmh = data.wind_speed ? (data.wind_speed * 3.6).toFixed(1) : '0';
                 windSpeedElement.textContent = `${windKmh} km/h`;
+                console.log('💨 Updated wind speed:', windKmh + ' km/h');
             }
 
             // Update pressure
-            const pressureElement = SecureDOM.getElement('#pressure');
+            const pressureElement = this.getReliableElement('#pressure');
             if (pressureElement) {
                 pressureElement.textContent = `${data.pressure || 0} hPa`;
+                console.log('📊 Updated pressure:', data.pressure + ' hPa');
             }
 
             // Update UV index
-            const uvIndexElement = SecureDOM.getElement('#uv-index');
+            const uvIndexElement = this.getReliableElement('#uv-index');
             if (uvIndexElement) {
                 uvIndexElement.textContent = data.uv_index || '--';
+                console.log('☀️ Updated UV index:', data.uv_index);
             }
 
             // Update cloudiness
-            const cloudinessElement = SecureDOM.getElement('#cloudiness');
+            const cloudinessElement = this.getReliableElement('#cloudiness');
             if (cloudinessElement) {
                 cloudinessElement.textContent = `${data.clouds || 0}%`;
+                console.log('☁️ Updated cloudiness:', data.clouds + '%');
             }
 
             // Show the current weather card
-            const currentWeatherCard = SecureDOM.getElement('#current-weather');
+            const currentWeatherCard = this.getReliableElement('#current-weather');
             if (currentWeatherCard) {
                 currentWeatherCard.style.display = 'block';
                 currentWeatherCard.style.opacity = '1';
                 currentWeatherCard.style.visibility = 'visible';
                 console.log('👁️ Current weather card made visible');
-            } else {
-                console.error('❌ Current weather card element not found!');
             }
 
             // Update page title safely
@@ -911,7 +948,7 @@ class SecureWeatherApp {
     
     // Display 24-hour forecast
     displayHourlyForecast(forecastList) {
-        const hourlyContainer = SecureDOM.getElement('#hourly-forecast');
+        const hourlyContainer = this.getReliableElement('#hourly-forecast');
         if (!hourlyContainer) {
             console.warn('⚠️ Hourly forecast container not found');
             return;
@@ -933,7 +970,7 @@ class SecureWeatherApp {
     
     // Display 5-day forecast
     displayDailyForecast(forecastList) {
-        const forecastContainer = SecureDOM.getElement('#forecast-container');
+        const forecastContainer = this.getReliableElement('#forecast-container');
         if (!forecastContainer) {
             console.warn('⚠️ Daily forecast container not found');
             return;
