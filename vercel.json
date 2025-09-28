@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "api/weather.js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/geocoding.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "env": {
+    "OPENWEATHER_API_KEY": "@openweather-api-key"
+  }
+}

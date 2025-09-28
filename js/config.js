@@ -68,7 +68,12 @@ if (typeof window !== 'undefined') {
     // Client-side security validation
     console.log('🔒 Loading secure configuration...');
     
-    if (!CONFIG.isApiKeyValid()) {
+    // Check if running on production (Vercel) or localhost
+    const isProduction = !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1');
+    
+    if (isProduction) {
+        console.log('✅ Running on production - using serverless API proxy');
+    } else if (!CONFIG.isApiKeyValid()) {
         console.warn('⚠️ OpenWeatherMap API key not configured properly. Some features may not work.');
     } else {
         console.log('✅ API key configuration validated');
@@ -76,8 +81,14 @@ if (typeof window !== 'undefined') {
     
     // SECURITY: Validate URLs without exposing internal details
     try {
-        new URL(CONFIG.OPENWEATHER_BASE_URL);
-        new URL(CONFIG.OPENWEATHER_GEOCODING_URL);
+        const baseUrl = CONFIG.OPENWEATHER_BASE_URL;
+        const geocodingUrl = CONFIG.OPENWEATHER_GEOCODING_URL;
+        
+        // Only validate full URLs, skip relative paths for serverless
+        if (baseUrl.startsWith('http')) {
+            new URL(baseUrl);
+            new URL(geocodingUrl);
+        }
         console.log('✅ API endpoints validated');
     } catch (error) {
         console.error('❌ Invalid API URL configuration');
