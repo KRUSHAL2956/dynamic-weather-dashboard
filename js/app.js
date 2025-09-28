@@ -60,8 +60,8 @@ class SecureWeatherService {
             return CONFIG.OPENWEATHER_API_KEY;
         }
         
-        // Fallback for immediate functionality
-        return 'ecd10e5059b846b4977031d32d044f69';
+        // No fallback - use environment variables only
+        return null;
     }
 
     // SECURITY: Rate limiting

@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-    const API_KEY = process.env.OPENWEATHER_API_KEY || 'ecd10e5059b846b4977031d32d044f69';
+    const API_KEY = process.env.OPENWEATHER_API_KEY;
     
     console.log('API Key available:', !!API_KEY);
     
