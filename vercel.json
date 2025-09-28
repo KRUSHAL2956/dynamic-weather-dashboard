@@ -1,0 +1,15 @@
+{
+  "functions": {
+    "api/*.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "env": {
+    "OPENWEATHER_API_KEY": "@openweather-api-key"
+  },
+  "routes": [
+    { "src": "/api/weather", "dest": "/api/weather.js" },
+    { "src": "/api/geocoding", "dest": "/api/geocoding.js" },
+    { "src": "/api/weather-tiles", "dest": "/api/weather-tiles.js" }
+  ]
+}
