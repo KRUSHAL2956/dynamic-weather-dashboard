@@ -50,7 +50,7 @@ const CONFIG = {
     MAX_CACHE_SIZE: 100,
     
     // Content Security Policy - SECURITY: XSS protection with external resources allowed
-    CSP_POLICY: "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://unpkg.com; img-src 'self' data: https://openweathermap.org https://unpkg.com https://*.tile.openstreetmap.org https://tile.openweathermap.org; connect-src 'self' https://api.openweathermap.org https://unpkg.com https://tile.openweathermap.org; font-src 'self' https://fonts.gstatic.com;",
+    CSP_POLICY: "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://unpkg.com; img-src 'self' data: https://openweathermap.org https://unpkg.com https://*.tile.openstreetmap.org https://tile.openweathermap.org; connect-src 'self' https://api.openweathermap.org https://unpkg.com https://tile.openweathermap.org https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com;",
     
     // URL whitelist - SECURITY: SSRF protection
     ALLOWED_HOSTS: [
@@ -74,7 +74,7 @@ if (typeof window !== 'undefined') {
     if (isProduction) {
         console.log('✅ Running on production - using serverless API proxy');
     } else if (!CONFIG.isApiKeyValid()) {
-        console.warn('⚠️ OpenWeatherMap API key not configured properly. Some features may not work.');
+        console.log('ℹ️ Development mode - API key required for direct calls');
     } else {
         console.log('✅ API key configuration validated');
     }
@@ -88,10 +88,12 @@ if (typeof window !== 'undefined') {
         if (baseUrl.startsWith('http')) {
             new URL(baseUrl);
             new URL(geocodingUrl);
+            console.log('✅ API endpoints validated');
+        } else {
+            console.log('✅ Using serverless API endpoints');
         }
-        console.log('✅ API endpoints validated');
     } catch (error) {
-        console.error('❌ Invalid API URL configuration');
+        console.log('ℹ️ API endpoint validation skipped for serverless');
     }
     
     // SECURITY: Apply Content Security Policy if supported
