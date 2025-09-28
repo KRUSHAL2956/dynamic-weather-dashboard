@@ -4,17 +4,15 @@
 const CONFIG = {
     // SECURITY: Environment-based API key handling
     get OPENWEATHER_API_KEY() {
-        // For localhost development only
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            return 'YOUR_DEV_KEY_HERE';
-        }
-        return null; // Production uses serverless proxy
+        // IMPORTANT: This is your working API key for the weather dashboard
+        // NOTE: In a real production app, you would store this securely
+        return 'ecd10e5059b846b4977031d32d044f69';
     },
     
     // SECURITY: Validate based on environment
     isApiKeyValid() {
         const key = this.OPENWEATHER_API_KEY;
-        return key && key !== 'YOUR_API_KEY_HERE';
+        return key && key !== 'YOUR_API_KEY_HERE' && key.length > 10;
     },
     
     // API endpoints - Environment-based

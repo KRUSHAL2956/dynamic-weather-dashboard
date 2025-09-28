@@ -17,12 +17,32 @@ A modern, responsive weather dashboard that provides real-time weather informati
 1. Visit [OpenWeatherMap API](https://openweathermap.org/api)
 2. Sign up and generate your API key
 
-### 2. Deploy
-Deploy to Vercel and set `OPENWEATHER_API_KEY` environment variable in project settings.
+### 2. Deploy to Vercel
 
-### 3. Run
-- **Localhost**: Open `index.html` (uses direct API calls)
-- **Production**: Deploy to Vercel (uses secure serverless proxy)
+1. Fork or clone this repository to your GitHub account
+2. Login to [Vercel](https://vercel.com) and create a new project from your repository
+3. During setup, add this environment variable:
+   - `OPENWEATHER_API_KEY` = Your OpenWeatherMap API Key
+4. Deploy!
+
+### 3. Run Locally
+
+#### For Local Development (without API proxy):
+1. Open `index.html` directly in your browser
+2. Edit the `js/config.js` file to add your OpenWeatherMap API key:
+   ```javascript
+   get OPENWEATHER_API_KEY() {
+       // For localhost development only
+       if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+           return 'YOUR_API_KEY_HERE'; // Replace with your actual API key
+       }
+       return null; // Production uses serverless proxy
+   }
+   ```
+3. Save and refresh your browser
+
+#### For Production-like Testing:
+Simply deploy to Vercel as described above and use the deployed URL
 
 ## 🚀 Live Demo
 

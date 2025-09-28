@@ -222,15 +222,26 @@
                     // Add weather layer based on environment
                     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
                     
-                    if (isLocalhost && typeof CONFIG !== 'undefined' && CONFIG.isApiKeyValid()) {
+                    // For local development and testing, always use the direct OpenWeatherMap API
+                    // This avoids the need for API proxy endpoints in local development
+                    if (typeof CONFIG !== 'undefined' && CONFIG.isApiKeyValid()) {
+                        // Development with valid API key
                         const apiKey = CONFIG.OPENWEATHER_API_KEY;
                         L.tileLayer(`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${apiKey}`, {
                             attribution: '© OpenWeatherMap',
                             opacity: 0.6
                         }).addTo(map);
-                        console.log('✅ Weather layer added to map');
+                        console.log('✅ Weather layer added to map (direct API mode)');
+                    } else if (!isLocalhost) {
+                        // Production mode - use API proxy only on Vercel deployment
+                        L.tileLayer(`/api/weather-tiles?layer=precipitation_new&z={z}&x={x}&y={y}`, {
+                            attribution: '© OpenWeatherMap',
+                            opacity: 0.6
+                        }).addTo(map);
+                        console.log('✅ Weather layer added to map (production mode)');
                     } else {
-                            console.log('🌐 Production mode - showing base map layer');
+                        // Local development without valid API key
+                        console.log('⚠️ No valid API key found for weather layer');
                     }
                     
                     console.log('✅ Weather map created successfully!');
