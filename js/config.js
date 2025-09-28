@@ -69,9 +69,9 @@ if (typeof window !== 'undefined') {
     console.log('🔒 Loading secure configuration...');
     
     // Check if running on production (Vercel) or localhost
-    const isProduction = !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1');
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     
-    if (isProduction) {
+    if (!isLocalhost) {
         console.log('✅ Running on production - using serverless API proxy');
     } else if (!CONFIG.isApiKeyValid()) {
         console.log('ℹ️ Development mode - API key required for direct calls');

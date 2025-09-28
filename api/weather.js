@@ -1,5 +1,7 @@
 export default async function handler(req, res) {
-    const API_KEY = process.env.OPENWEATHER_API_KEY;
+    const API_KEY = process.env.OPENWEATHER_API_KEY || 'ecd10e5059b846b4977031d32d044f69';
+    
+    console.log('API Key available:', !!API_KEY);
     
     if (!API_KEY) {
         return res.status(500).json({ error: 'API key not configured' });
