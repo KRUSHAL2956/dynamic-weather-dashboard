@@ -17,14 +17,12 @@ A modern, responsive weather dashboard that provides real-time weather informati
 1. Visit [OpenWeatherMap API](https://openweathermap.org/api)
 2. Sign up and generate your API key
 
-### 2. Configure
-Set your API key as an environment variable:
-```bash
-export OPENWEATHER_API_KEY="your_api_key_here"
-```
+### 2. Deploy
+Deploy to Vercel and set `OPENWEATHER_API_KEY` environment variable in project settings.
 
 ### 3. Run
-Open `index.html` in your browser or serve via a local web server.
+- **Localhost**: Open `index.html` (uses direct API calls)
+- **Production**: Deploy to Vercel (uses secure serverless proxy)
 
 ## 🚀 Live Demo
 
@@ -35,7 +33,12 @@ Open `index.html` in your browser or serve via a local web server.
 ```
 dynamic-weather-dashboard/
 ├── index.html
+├── api/                 # Serverless functions
+│   ├── weather.js
+│   └── geocoding.js
 ├── css/
+│   ├── style.css
+│   └── responsive.css
 ├── js/
 │   ├── app.js
 │   ├── config.js

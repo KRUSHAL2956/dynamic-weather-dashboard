@@ -27,10 +27,10 @@ class WeatherAPI {
 
     /** Check if API key is configured */
     isApiKeySet() {
-        return this.API_KEY && 
-               this.API_KEY !== 'YOUR_API_KEY_HERE' && 
-               this.API_KEY !== '' && 
-               this.API_KEY.length > 10;
+        if (this.BASE_URL.includes('openweathermap.org')) {
+            return this.API_KEY && this.API_KEY !== 'YOUR_API_KEY_HERE' && this.API_KEY.length > 10;
+        }
+        return true; // Always true when using serverless proxy
     }
 
     /** Generate cache key */
@@ -133,10 +133,6 @@ class WeatherAPI {
      * @returns {Promise<Object>} UV index and additional data
      */
     async getUVIndex(lat, lon) {
-        if (!this.isApiKeySet()) {
-            throw new Error('API key not configured. Please set your OpenWeatherMap API key.');
-        }
-
         const cacheKey = this.getCacheKey('uv', `${lat},${lon}`);
         const cachedData = this.getCachedData(cacheKey);
         
@@ -284,10 +280,6 @@ class WeatherAPI {
      * @returns {Promise<Object>} Current weather data
      */
     async getCurrentWeather(city) {
-        if (!this.isApiKeySet()) {
-            throw new Error('API key not configured. Please set your OpenWeatherMap API key.');
-        }
-
         const cacheKey = this.getCacheKey('current', city.toLowerCase());
         const cachedData = this.getCachedData(cacheKey);
         
@@ -296,9 +288,14 @@ class WeatherAPI {
             return cachedData;
         }
 
-        const url = `${this.BASE_URL}/weather?q=${encodeURIComponent(city)}&appid=${this.API_KEY}&units=metric`;
-        const data = await this.makeRequest(url);
+        let url;
+        if (this.BASE_URL.includes('openweathermap.org')) {
+            url = `${this.BASE_URL}/weather?q=${encodeURIComponent(city)}&appid=${this.API_KEY}&units=metric`;
+        } else {
+            url = `${this.BASE_URL}/weather?city=${encodeURIComponent(city)}`;
+        }
         
+        const data = await this.makeRequest(url);
         this.setCachedData(cacheKey, data);
         return data;
     }
@@ -310,10 +307,6 @@ class WeatherAPI {
      * @returns {Promise<Object>} Current weather data
      */
     async getCurrentWeatherByCoords(lat, lon) {
-        if (!this.isApiKeySet()) {
-            throw new Error('API key not configured. Please set your OpenWeatherMap API key.');
-        }
-
         const cacheKey = this.getCacheKey('current', `${lat},${lon}`);
         const cachedData = this.getCachedData(cacheKey);
         
@@ -322,9 +315,14 @@ class WeatherAPI {
             return cachedData;
         }
 
-        const url = `${this.BASE_URL}/weather?lat=${lat}&lon=${lon}&appid=${this.API_KEY}&units=metric`;
-        const data = await this.makeRequest(url);
+        let url;
+        if (this.BASE_URL.includes('openweathermap.org')) {
+            url = `${this.BASE_URL}/weather?lat=${lat}&lon=${lon}&appid=${this.API_KEY}&units=metric`;
+        } else {
+            url = `${this.BASE_URL}/weather?lat=${lat}&lon=${lon}`;
+        }
         
+        const data = await this.makeRequest(url);
         this.setCachedData(cacheKey, data);
         return data;
     }
@@ -335,10 +333,6 @@ class WeatherAPI {
      * @returns {Promise<Object>} 5-day forecast data
      */
     async getForecast(city) {
-        if (!this.isApiKeySet()) {
-            throw new Error('API key not configured. Please set your OpenWeatherMap API key.');
-        }
-
         const cacheKey = this.getCacheKey('forecast', city.toLowerCase());
         const cachedData = this.getCachedData(cacheKey);
         
@@ -347,9 +341,14 @@ class WeatherAPI {
             return cachedData;
         }
 
-        const url = `${this.BASE_URL}/forecast?q=${encodeURIComponent(city)}&appid=${this.API_KEY}&units=metric`;
-        const data = await this.makeRequest(url);
+        let url;
+        if (this.BASE_URL.includes('openweathermap.org')) {
+            url = `${this.BASE_URL}/forecast?q=${encodeURIComponent(city)}&appid=${this.API_KEY}&units=metric`;
+        } else {
+            url = `${this.BASE_URL}/weather?city=${encodeURIComponent(city)}&type=forecast`;
+        }
         
+        const data = await this.makeRequest(url);
         this.setCachedData(cacheKey, data);
         return data;
     }
@@ -361,10 +360,6 @@ class WeatherAPI {
      * @returns {Promise<Object>} 5-day forecast data
      */
     async getForecastByCoords(lat, lon) {
-        if (!this.isApiKeySet()) {
-            throw new Error('API key not configured. Please set your OpenWeatherMap API key.');
-        }
-
         const cacheKey = this.getCacheKey('forecast', `${lat},${lon}`);
         const cachedData = this.getCachedData(cacheKey);
         
@@ -373,9 +368,14 @@ class WeatherAPI {
             return cachedData;
         }
 
-        const url = `${this.BASE_URL}/forecast?lat=${lat}&lon=${lon}&appid=${this.API_KEY}&units=metric`;
-        const data = await this.makeRequest(url);
+        let url;
+        if (this.BASE_URL.includes('openweathermap.org')) {
+            url = `${this.BASE_URL}/forecast?lat=${lat}&lon=${lon}&appid=${this.API_KEY}&units=metric`;
+        } else {
+            url = `${this.BASE_URL}/weather?lat=${lat}&lon=${lon}&type=forecast`;
+        }
         
+        const data = await this.makeRequest(url);
         this.setCachedData(cacheKey, data);
         return data;
     }
@@ -387,7 +387,7 @@ class WeatherAPI {
      */
     async getCompleteWeatherData(location) {
         try {
-            let currentWeather, forecast, uvData = null;
+            let currentWeather, forecast;
 
             if (location.city) {
                 currentWeather = await this.getCurrentWeather(location.city);
@@ -417,10 +417,6 @@ class WeatherAPI {
      * @returns {Promise<Array>} Array of city suggestions
      */
     async searchCities(query, limit = 5) {
-        if (!this.isApiKeySet()) {
-            throw new Error('API key not configured.');
-        }
-
         if (!query || query.length < 2) {
             return [];
         }
@@ -449,7 +445,12 @@ class WeatherAPI {
             const searchLimit = Math.min(limit * SEARCH_MULTIPLIER, MAX_SEARCH_RESULTS);
             
             const encodedQuery = encodeURIComponent(queryKey);
-            const url = `${this.GEOCODING_URL}/direct?q=${encodedQuery},IN&limit=${this.validateLimit(searchLimit)}&appid=${this.API_KEY}`;
+            let url;
+            if (this.GEOCODING_URL.includes('openweathermap.org')) {
+                url = `${this.GEOCODING_URL}/direct?q=${encodedQuery},IN&limit=${this.validateLimit(searchLimit)}&appid=${this.API_KEY}`;
+            } else {
+                url = `${this.GEOCODING_URL}/geocoding?q=${encodedQuery}&limit=${this.validateLimit(searchLimit)}`;
+            }
             const data = await this.makeRequest(url);
             
             // Filter and format results efficiently
@@ -509,6 +510,11 @@ class WeatherAPI {
      * @param {string} url - URL to validate
      */
     validateUrl(url) {
+        // Skip validation for relative URLs (our serverless proxy)
+        if (url.startsWith('/api')) {
+            return;
+        }
+        
         try {
             const urlObj = new URL(url);
             

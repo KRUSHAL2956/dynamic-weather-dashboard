@@ -1,24 +1,3 @@
-# API Keys and Configuration
-js/config.js
-*.key
-*.pem
-*.p12
-*.pfx
-
-# Sensitive files
-secrets/
-credentials/
-.secrets
-.credentials
-
-# Environment files
-.env*
-!.env.example
-.env.local
-.env.production
-.env.development
-.env.test
-
 # IDE files
 .vscode/
 .idea/
@@ -31,14 +10,3 @@ Thumbs.db
 
 # Logs
 *.log
-npm-debug.log*
-
-# Dependencies
-node_modules/
-
-# Build outputs
-dist/
-build/
-
-# Cache
-.cache/test-icons.html
