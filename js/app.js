@@ -684,7 +684,12 @@ class SecureWeatherApp {
 
     // SECURITY FIX: Safe current weather display (fixes XSS in lines 495, 548, 705)
     displayCurrentWeather(data) {
-        if (!data) return;
+        if (!data) {
+            console.warn('⚠️ No weather data provided to display');
+            return;
+        }
+
+        console.log('🌤️ Displaying weather data:', data);
 
         try {
             // Update city name and country
@@ -692,6 +697,9 @@ class SecureWeatherApp {
             if (cityNameElement) {
                 const locationText = data.country ? `${data.name}, ${data.country}` : data.name;
                 cityNameElement.textContent = Utils.sanitizeText(locationText);
+                console.log('🏙️ Updated city name:', locationText);
+            } else {
+                console.error('❌ City name element not found');
             }
 
             // Update date and time
@@ -719,7 +727,11 @@ class SecureWeatherApp {
             // Update temperature
             const tempValueElement = SecureDOM.getElement('#temp-value');
             if (tempValueElement) {
-                tempValueElement.textContent = Math.round(data.temp);
+                const roundedTemp = Math.round(data.temp);
+                tempValueElement.textContent = roundedTemp;
+                console.log('🌡️ Updated temperature:', roundedTemp + '°C');
+            } else {
+                console.error('❌ Temperature element not found');
             }
 
             // Update weather description
@@ -777,6 +789,10 @@ class SecureWeatherApp {
             if (currentWeatherCard) {
                 currentWeatherCard.style.display = 'block';
                 currentWeatherCard.style.opacity = '1';
+                currentWeatherCard.style.visibility = 'visible';
+                console.log('👁️ Current weather card made visible');
+            } else {
+                console.error('❌ Current weather card element not found!');
             }
 
             // Update page title safely
@@ -879,21 +895,172 @@ class SecureWeatherApp {
 
     // SECURITY: Safe forecast display
     displayForecast(data) {
-        if (!data || !data.list) return;
+        if (!data || !data.list) {
+            console.warn('⚠️ No forecast data available');
+            return;
+        }
 
+        console.log('📊 Displaying forecast data:', data.list.length, 'items');
+        
+        // Display hourly forecast (next 24 hours)
+        this.displayHourlyForecast(data.list);
+        
+        // Display daily forecast (next 5 days)
+        this.displayDailyForecast(data.list);
+    }
+    
+    // Display 24-hour forecast
+    displayHourlyForecast(forecastList) {
+        const hourlyContainer = SecureDOM.getElement('#hourly-forecast');
+        if (!hourlyContainer) {
+            console.warn('⚠️ Hourly forecast container not found');
+            return;
+        }
+        
+        // Clear existing content
+        hourlyContainer.textContent = '';
+        
+        // Get next 8 items (24 hours, 3-hour intervals)
+        const hourlyItems = forecastList.slice(0, 8);
+        
+        hourlyItems.forEach(item => {
+            const hourlyCard = this.createHourlyCard(item);
+            hourlyContainer.appendChild(hourlyCard);
+        });
+        
+        console.log('⏰ Hourly forecast displayed:', hourlyItems.length, 'items');
+    }
+    
+    // Display 5-day forecast
+    displayDailyForecast(forecastList) {
         const forecastContainer = SecureDOM.getElement('#forecast-container');
-        if (!forecastContainer) return;
-
-        // SECURITY: Clear existing content safely
+        if (!forecastContainer) {
+            console.warn('⚠️ Daily forecast container not found');
+            return;
+        }
+        
+        // Clear existing content
         forecastContainer.textContent = '';
-
-        // Create forecast cards (next 5 days)
-        const dailyForecasts = this.processDailyForecasts(data.list);
+        
+        // Process daily forecasts
+        const dailyForecasts = this.processDailyForecasts(forecastList);
         
         dailyForecasts.slice(0, 5).forEach(forecast => {
-            const card = SecureDOM.createForecastCard(forecast);
+            const card = this.createDailyCard(forecast);
             forecastContainer.appendChild(card);
         });
+        
+        console.log('📅 Daily forecast displayed:', dailyForecasts.length, 'days');
+    }
+
+    // Create hourly forecast card
+    createHourlyCard(item) {
+        const card = document.createElement('div');
+        card.className = 'hourly-card';
+        card.style.cssText = `
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px;
+            margin: 0 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            min-width: 80px;
+            text-align: center;
+        `;
+        
+        // Time
+        const time = new Date(item.dt * 1000);
+        const timeElement = document.createElement('div');
+        timeElement.className = 'hourly-time';
+        timeElement.textContent = time.getHours() + ':00';
+        timeElement.style.cssText = 'font-size: 14px; color: #666; margin-bottom: 8px;';
+        
+        // Weather icon
+        const iconElement = document.createElement('img');
+        iconElement.src = `https://openweathermap.org/img/wn/${item.weather[0].icon}.png`;
+        iconElement.alt = item.weather[0].description;
+        iconElement.style.cssText = 'width: 40px; height: 40px; margin-bottom: 8px;';
+        
+        // Temperature
+        const tempElement = document.createElement('div');
+        tempElement.className = 'hourly-temp';
+        tempElement.textContent = Math.round(item.main.temp) + '°';
+        tempElement.style.cssText = 'font-size: 16px; font-weight: bold; margin-bottom: 4px;';
+        
+        // Description
+        const descElement = document.createElement('div');
+        descElement.className = 'hourly-desc';
+        descElement.textContent = item.weather[0].main;
+        descElement.style.cssText = 'font-size: 12px; color: #888; text-transform: capitalize;';
+        
+        card.appendChild(timeElement);
+        card.appendChild(iconElement);
+        card.appendChild(tempElement);
+        card.appendChild(descElement);
+        
+        return card;
+    }
+    
+    // Create daily forecast card
+    createDailyCard(forecast) {
+        const card = document.createElement('div');
+        card.className = 'daily-card';
+        card.style.cssText = `
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            margin: 8px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            min-height: 60px;
+        `;
+        
+        // Date
+        const date = new Date(forecast.dt * 1000);
+        const dateElement = document.createElement('div');
+        dateElement.className = 'daily-date';
+        dateElement.textContent = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        dateElement.style.cssText = 'font-weight: bold; min-width: 100px;';
+        
+        // Weather icon and description
+        const weatherDiv = document.createElement('div');
+        weatherDiv.style.cssText = 'display: flex; align-items: center; flex: 1; justify-content: center;';
+        
+        const iconElement = document.createElement('img');
+        iconElement.src = `https://openweathermap.org/img/wn/${forecast.weather[0].icon}.png`;
+        iconElement.alt = forecast.weather[0].description;
+        iconElement.style.cssText = 'width: 50px; height: 50px; margin-right: 12px;';
+        
+        const descElement = document.createElement('div');
+        descElement.textContent = Utils.capitalizeWords(forecast.weather[0].description);
+        descElement.style.cssText = 'font-size: 14px; color: #666;';
+        
+        weatherDiv.appendChild(iconElement);
+        weatherDiv.appendChild(descElement);
+        
+        // Temperature range
+        const tempDiv = document.createElement('div');
+        tempDiv.className = 'daily-temps';
+        tempDiv.style.cssText = 'text-align: right; min-width: 80px;';
+        
+        const maxTemp = document.createElement('span');
+        maxTemp.textContent = Math.round(forecast.main.temp_max) + '°';
+        maxTemp.style.cssText = 'font-weight: bold; margin-right: 8px;';
+        
+        const minTemp = document.createElement('span');
+        minTemp.textContent = Math.round(forecast.main.temp_min) + '°';
+        minTemp.style.cssText = 'color: #888;';
+        
+        tempDiv.appendChild(maxTemp);
+        tempDiv.appendChild(minTemp);
+        
+        card.appendChild(dateElement);
+        card.appendChild(weatherDiv);
+        card.appendChild(tempDiv);
+        
+        return card;
     }
 
     // SECURITY: Safe forecast processing
