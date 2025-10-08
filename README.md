@@ -1,73 +1,37 @@
 # Dynamic Weather Dashboard
 
-A modern, responsive weather dashboard that provides real-time weather information using the OpenWeatherMap API.
+A responsive weather application built with vanilla JavaScript, featuring real-time weather data and interactive maps.
 
 ## Features
 
-- Real-time weather data with detailed metrics
-- 5-day weather forecast
-- Location services (GPS or manual search)
-- Responsive design for all devices
+- Current weather conditions and 5-day forecast
+- Interactive weather map with Leaflet.js
+- City search with auto-complete suggestions
 - Dark/Light theme toggle
-- UV index display with color coding
+- Responsive design for all devices
+
+## Tech Stack
+
+- JavaScript, HTML5, CSS3
+- Leaflet.js for maps
+- OpenWeatherMap API
+- Vercel deployment
 
 ## Setup
 
-### 1. Get API Key
-1. Visit [OpenWeatherMap API](https://openweathermap.org/api)
-2. Sign up and generate your API key
+1. Clone the repository: `git clone https://github.com/KRUSHAL2956/dynamic-weather-dashboard.git`
+2. Get API key from [OpenWeatherMap](https://openweathermap.org/api)
+3. Update `js/config.js` with your API key
+4. Start local server: `python -m http.server 8080`
+5. Open `http://localhost:8080`
 
-### 2. Deploy to Vercel
+## Deployment
 
-1. Fork or clone this repository to your GitHub account
-2. Login to [Vercel](https://vercel.com) and create a new project from your repository
-3. During setup, add this environment variable:
-   - `OPENWEATHER_API_KEY` = Your OpenWeatherMap API Key
-4. Deploy!
+Deploy to Vercel and set `OPENWEATHER_API_KEY` environment variable.
 
-### 3. Run Locally
+## Contact
 
-#### For Local Development (without API proxy):
-1. Open `index.html` directly in your browser
-2. Edit the `js/config.js` file to add your OpenWeatherMap API key:
-   ```javascript
-   get OPENWEATHER_API_KEY() {
-       // For localhost development only
-       if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-           return 'YOUR_API_KEY_HERE'; // Replace with your actual API key
-       }
-       return null; // Production uses serverless proxy
-   }
-   ```
-3. Save and refresh your browser
-
-#### For Production-like Testing:
-Simply deploy to Vercel as described above and use the deployed URL
-
-## 🚀 Live Demo
-
-**🌐 Website**: [https://krushal-weather-dashboard.vercel.app/](https://krushal-weather-dashboard.vercel.app/)
-
-## File Structure
-
-```
-dynamic-weather-dashboard/
-├── index.html
-├── api/                 # Serverless functions
-│   ├── weather.js
-│   └── geocoding.js
-├── css/
-│   ├── style.css
-│   └── responsive.css
-├── js/
-│   ├── app.js
-│   ├── config.js
-│   ├── utils.js
-│   ├── weather.js
-│   └── constants.js
-└── README.md
-```
-
-## Browser Support
-
-Modern browsers (Chrome 60+, Firefox 55+, Safari 12+, Edge 79+)
+**Developer:** Krushal Hirpara  
+**Email:** krushalhirpara.connect@gmail.com  
+**GitHub:** https://github.com/KRUSHAL2956
+**LinkedIn:** www.linkedin.com/in/krushal-hirpara-29y05
