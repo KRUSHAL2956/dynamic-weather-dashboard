@@ -520,23 +520,27 @@ const Utils = {
 
     /** Validate and sanitize city name - SECURITY: Enhanced validation */
     validateCityName(cityName) {
+        // Use InputValidator if available
+        if (window.InputValidator) {
+            const validation = window.InputValidator.validateCityName(cityName);
+            return validation.isValid ? validation.sanitized : null;
+        }
+        
+        // Fallback validation
         if (!cityName || typeof cityName !== 'string') {
             return null;
         }
         
-        // SECURITY: Remove dangerous characters and limit length
         const sanitized = cityName
             .trim()
-            .replace(/[<>\"'&]/g, '') // Remove dangerous HTML chars
-            .replace(/[^\p{L}\p{N}\s,.'\-]/gu, '') // Allow only letters, numbers, spaces, and safe punctuation
-            .substring(0, 100); // Limit length
+            .replace(/[<>\"'&]/g, '')
+            .replace(/[^\p{L}\p{N}\s,.'\-]/gu, '')
+            .substring(0, 100);
         
-        // SECURITY: Additional validation
         if (sanitized.length < 1 || sanitized.length > 100) {
             return null;
         }
         
-        // SECURITY: Prevent injection attempts
         if (/script|javascript|vbscript|onload|onerror/i.test(sanitized)) {
             return null;
         }

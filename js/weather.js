@@ -166,8 +166,13 @@ class WeatherAPI {
             // Apply rate limiting
             this.checkRateLimit();
             
-            // Validate URL for security
-            this.validateUrl(url);
+            // Validate URL using InputValidator
+            if (window.InputValidator) {
+                const urlValidation = window.InputValidator.validateUrl(url);
+                if (!urlValidation.isValid) {
+                    throw new Error(`Invalid URL: ${urlValidation.error}`);
+                }
+            }
             
             // Log sanitized URL (hide API key)
             const sanitizedUrl = url.replace(/appid=[^&]+/, 'appid=***');
@@ -229,13 +234,27 @@ class WeatherAPI {
             return data;
             
         } catch (error) {
-            // Handle specific error types
+            // Use ErrorHandler if available
+            if (window.ErrorHandler) {
+                const result = await window.ErrorHandler.handleApiError(
+                    error, 
+                    'Weather API Request',
+                    () => this.makeRequest(url)
+                );
+                
+                if (!result.success) {
+                    throw new Error(result.userMessage || result.error);
+                }
+                
+                return result.data;
+            }
+            
+            // Fallback error handling
             if (error.name === 'AbortError') {
                 console.error('⏱️ API request timed out');
                 throw new Error('Request timed out. Please check your connection and try again.');
             }
             
-            // Log and rethrow with better message
             console.error('❌ API request failed:', error.message);
             throw new Error(`Weather data request failed: ${error.message}`);
         }
